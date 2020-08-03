@@ -2162,8 +2162,6 @@ public void printComplexSVG(PrintWriter out, double minX, double minY, double ma
 				nuc = sstr.getNuc2DAt(nucID);
 			FontMetrics
 				metrics = ComplexParentFrame.frame.getFontMetrics(nuc.getFont());
-			int
-				width = metrics.charWidth(nuc.getNucChar());
 			if (nuc != null) {
 				double
 					nucX = nuc.getX(),
@@ -2172,7 +2170,7 @@ public void printComplexSVG(PrintWriter out, double minX, double minY, double ma
 					font = nuc.getFont();
 				letters.add("<text id=\"" + nucID + "\" transform=\"matrix(1 0 0 1 " + StringUtil.roundStrVal(nucX, 2) + " " + StringUtil.roundStrVal(nucY, 2) + ")\" fill=\"black\" font-family=\"" + font.getFamily() + "\" font-weight=\"normal\" font-size=\"" + font.getSize() + "\">" + nuc.getNucChar() + "</text>");
 				double
-					dx = width / 2d,
+					dx = metrics.charWidth(nuc.getNucChar()) / 2d,
 					dy = -nuc.getFont().getSize2D() / 2d;
 				if (nuc.getLabelList() != null) {
 					Vector

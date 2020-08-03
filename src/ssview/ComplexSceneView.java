@@ -1,6 +1,5 @@
 package ssview;
 
-import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
@@ -27,9 +26,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -41,7 +38,6 @@ import java.awt.print.PrinterJob;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -54,8 +50,8 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
-import java.util.Random;
 import java.util.Vector;
 
 import javax.print.attribute.HashPrintRequestAttributeSet;
@@ -99,7 +95,6 @@ import jimage.FontChooser;
 import jimage.GenFileFilter;
 import jimage.HexColorChooserPanel;
 import jimage.ViewImgCanvas;
-import util.StringUtil;
 
 public class ComplexSceneView extends DrawObjectView implements Printable, AdjustmentListener {
 
@@ -2009,7 +2004,8 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		private ArrayList<Line2D.Float>
 			nucleotideLines = new ArrayList<>(),
 			labelLines = new ArrayList<>();
-		private ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>> letters = new ArrayList<>(),
+		private ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>>
+			letters = new ArrayList<>(),
 			helixLabels = new ArrayList<>(), labels = new ArrayList<>();
 		private float
 			minimumScale = 0.75f,
@@ -2070,8 +2066,9 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					final
 						Iterator<String> iterator = lines.iterator();
 					if (iterator.hasNext()) {
-						final String line = iterator.next();
-						String fontFamily = "Helvetica";
+						String
+							line = iterator.next(),
+							fontFamily = "Helvetica";
 						if (line.contains("style")) {
 							fontSize = Float.parseFloat(this.boundedSubstring(line, "font-size:", "px").trim());
 							fontFamily = this.boundedSubstring(line, "font-family", ";").trim();
@@ -2079,134 +2076,123 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 						font = new Font(fontFamily, 0, Math.round(fontSize));
 						metrics = ComplexParentFrame.frame.getFontMetrics(font);
 					}
-					final Iterator<String> iterator2 = lines.iterator();
-					while (iterator2.hasNext()) {
-						final String line = iterator2.next();
+					for (String line : lines) {
 						if (line.contains("class=\"numbering-line\"")) {
-							final float x1 = Float.parseFloat(this.boundedSubstring(line, "x1=\"", "\""));
-							final float y1 = Float.parseFloat(this.boundedSubstring(line, "y1=\"", "\""));
-							final float x2 = Float.parseFloat(this.boundedSubstring(line, "x2=\"", "\""));
-							final float y2 = Float.parseFloat(this.boundedSubstring(line, "y2=\"", "\""));
+							float
+								x1 = Float.parseFloat(this.boundedSubstring(line, "x1=\"", "\"")),
+								y1 = Float.parseFloat(this.boundedSubstring(line, "y1=\"", "\"")),
+								x2 = Float.parseFloat(this.boundedSubstring(line, "x2=\"", "\"")),
+								y2 = Float.parseFloat(this.boundedSubstring(line, "y2=\"", "\""));
 							this.labelLines.add(new Line2D.Float(x1, y1, x2, y2));
 						} else if (line.contains("<line")) {
-							final float x1 = Float.parseFloat(this.boundedSubstring(line, "x1=\"", "\""));
-							final float y1 = Float.parseFloat(this.boundedSubstring(line, "y1=\"", "\""));
-							final float x2 = Float.parseFloat(this.boundedSubstring(line, "x2=\"", "\""));
-							final float y2 = Float.parseFloat(this.boundedSubstring(line, "y2=\"", "\""));
+							float
+								x1 = Float.parseFloat(this.boundedSubstring(line, "x1=\"", "\"")),
+								y1 = Float.parseFloat(this.boundedSubstring(line, "y1=\"", "\"")),
+								x2 = Float.parseFloat(this.boundedSubstring(line, "x2=\"", "\"")),
+								y2 = Float.parseFloat(this.boundedSubstring(line, "y2=\"", "\""));
 							this.nucleotideLines.add(new Line2D.Float(x1, y1, x2, y2));
 						} else if (line.contains("class=\"numbering-label\"")) {
-							final float x3 = Float.parseFloat(this.boundedSubstring(line, "x=\"", "\""));
-							final float y3 = Float.parseFloat(this.boundedSubstring(line, "y=\"", "\""));
-							final String label = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<")
-									.strip();
-							final float width = (float) metrics.stringWidth(label);
-							this.labels.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(label,
-									new Rectangle2D.Float(x3 - width / 2.0f, y3 - fontSize, width, fontSize), font,
-									null));
+							float
+								x = Float.parseFloat(this.boundedSubstring(line, "x=\"", "\"")),
+								y = Float.parseFloat(this.boundedSubstring(line, "y=\"", "\""));
+							String
+								label = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<").strip();
+							float
+								width = (float) metrics.stringWidth(label);
+							this.labels.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(label, new Rectangle2D.Float(x - width / 2.0f, y - fontSize, width, fontSize), font, null));
 						} else if (line.contains("title")) {
-							final float x3 = Float.parseFloat(this.boundedSubstring(line, "x=\"", "\""));
-							final float y3 = Float.parseFloat(this.boundedSubstring(line, "y=\"", "\""));
-							final String letter = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<")
-									.strip();
-							if (!letter.equalsIgnoreCase("A") && !letter.equalsIgnoreCase("C")
-									&& !letter.equalsIgnoreCase("G") && !letter.equalsIgnoreCase("U")) {
+							float
+								x = Float.parseFloat(this.boundedSubstring(line, "x=\"", "\"")),
+								y = Float.parseFloat(this.boundedSubstring(line, "y=\"", "\""));
+							String
+								letter = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<").strip();
+							if (letter.equalsIgnoreCase("A") || letter.equalsIgnoreCase("C") || letter.equalsIgnoreCase("G") || letter.equalsIgnoreCase("U")) {
+								this.letters.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(letter, new Rectangle2D.Float(x, y - fontSize, (float) metrics.stringWidth(letter), fontSize), font, null));
+							}
+						} else if (line.contains("text")) {
+							String[]
+								split = this.boundedSubstring(line, "matrix(", ")").split("\\s+");
+							float
+								x = Float.parseFloat(split[4]),
+								y = Float.parseFloat(split[5]);
+							String
+								letter2 = this.boundedSubstring(line, ">", "<").strip();
+							if (!letter2.equalsIgnoreCase("A") && !letter2.equalsIgnoreCase("C") && !letter2.equalsIgnoreCase("G") && !letter2.equalsIgnoreCase("U")) {
 								continue;
 							}
-							this.letters.add(
-									new Tuple4<String, Rectangle2D.Float, Font, Float>(letter, new Rectangle2D.Float(x3,
-											y3 - fontSize, (float) metrics.stringWidth(letter), fontSize), font, null));
-						} else {
-							if (!line.contains("text")) {
-								continue;
-							}
-							final String[] split = this.boundedSubstring(line, "matrix(", ")").split("\\s+");
-							final float x4 = Float.parseFloat(split[4]);
-							final float y4 = Float.parseFloat(split[5]);
-							final String letter2 = this.boundedSubstring(line, ">", "<").strip();
-							if (!letter2.equalsIgnoreCase("A") && !letter2.equalsIgnoreCase("C")
-									&& !letter2.equalsIgnoreCase("G") && !letter2.equalsIgnoreCase("U")) {
-								continue;
-							}
-							this.letters.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(letter2,
-									new Rectangle2D.Float(x4, y4 - fontSize, (float) metrics.stringWidth(letter2),
-											fontSize),
-									font, null));
+							this.letters.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(letter2, new Rectangle2D.Float(x, y - fontSize, (float) metrics.stringWidth(letter2), fontSize), font, null));
 						}
 					}
-					float dx = 0.0f;
-					float dy = 0.0f;
-					for (final Tuple4<String, Rectangle2D.Float, Font, Float> letter3 : this.letters) {
+					float
+						dx = 0.0f,
+						dy = 0.0f;
+					for (Tuple4<String, Rectangle2D.Float, Font, Float> letter3 : this.letters) {
 						dx += letter3.t1.width;
 						dy -= letter3.t1.height;
 					}
 					dx = dx * 1.2f / (this.letters.size() * 2.0f);
 					dy /= this.letters.size() * 2.0f;
-					for (final Line2D.Float float1 : this.labelLines) {
-						final Line2D.Float line2 = float1;
-						float1.x1 += dx;
-						final Line2D.Float float2 = line2;
-						float2.x2 += dx;
-						final Line2D.Float float3 = line2;
-						float3.y1 += dy;
-						final Line2D.Float float4 = line2;
-						float4.y2 += dy;
+					for (Line2D.Float labelLine : this.labelLines) {
+						labelLine.x1 += dx;
+						labelLine.x2 += dx;
+						labelLine.y1 += dy;
+						labelLine.y2 += dy;
 					}
-					for (final Tuple4<String, Rectangle2D.Float, Font, Float> label2 : this.labels) {
-						final Rectangle2D.Float float5 = label2.t1;
-						float5.x += label2.t1.width / 6.0f;
+					for (Tuple4<String, Rectangle2D.Float, Font, Float> label : this.labels) {
+						label.t1.x += label.t1.width / 6.0f;
 					}
 				} else {
-					for (final String line3 : styleLines) {
-						final int dotIndex = line3.indexOf(".");
-						final int openBracketIndex = line3.indexOf("{");
-						final String styleName = line3.substring(dotIndex + 1, openBracketIndex);
-						final HashMap<String, Object> styleData = new HashMap<String, Object>();
-						String[] split2;
-						for (int length = (split2 = line3.substring(openBracketIndex + 1, line3.indexOf("}"))
-								.split(";")).length, i = 0; i < length; ++i) {
-							final String styleDatum = split2[i];
-							final int colonIndex = styleDatum.indexOf(":");
-							final String datumLabel = styleDatum.substring(0, colonIndex);
-							final String datumContent = styleDatum.substring(colonIndex + 1);
-							Object datum = null;
-							Label_1791: {
-								Label_1764: {
-									final String s;
-									switch (s = datumLabel) {
-									case "stroke-width": {
-										break Label_1764;
-									}
-									case "font-size": {
-										break Label_1764;
-									}
-									case "stroke": {
-										break;
-									}
-									case "fill": {
-										break;
-									}
-									case "font-family": {
-										datum = datumContent.trim().replace("'", "");
-										break Label_1791;
-									}
-									default:
-										break Label_1791;
-									}
-									datum = (datumContent.trim().equalsIgnoreCase("none")
-											? new Color(0.0f, 0.0f, 0.0f, 1.0f)
-											: new Color(Integer.parseInt(datumContent.substring(1), 16), true));
-									break Label_1791;
-								}
-								datum = Float.parseFloat(datumContent.replace("px", "").replaceAll("\\s+", ""));
+					for (String line3 : styleLines) {
+						int
+							dotIndex = line3.indexOf("."),
+							openBracketIndex = line3.indexOf("{");
+						String
+							styleName = line3.substring(dotIndex + 1, openBracketIndex);
+						HashMap<String, Object>
+							styleData = new HashMap<String, Object>();
+						String[]
+							split = line3.substring(openBracketIndex + 1, line3.indexOf("}")).split(";");
+						int
+							length = split.length;
+						for (int i = 0; i < length; ++i) {
+							String
+								styleDatum = split[i];
+							int
+								colonIndex = styleDatum.indexOf(":");
+							String
+								datumLabel = styleDatum.substring(0, colonIndex),
+								datumContent = styleDatum.substring(colonIndex + 1);
+							Object
+								datum = null;
+							switch (datumLabel) {
+								case "stroke-width": 
+									datum = Float.parseFloat(datumContent.replace("px", "").replaceAll("\\s+", ""));
+									break;
+								case "font-size":
+									datum = Float.parseFloat(datumContent.replace("px", "").replaceAll("\\s+", ""));
+									break;
+								case "stroke":
+									datum = (datumContent.trim().equalsIgnoreCase("none") ? new Color(0.0f, 0.0f, 0.0f, 1.0f) : new Color(Integer.parseInt(datumContent.substring(1), 16), true));
+									break;
+								case "fill":
+									datum = (datumContent.trim().equalsIgnoreCase("none") ? new Color(0.0f, 0.0f, 0.0f, 1.0f) : new Color(Integer.parseInt(datumContent.substring(1), 16), true));
+									break;
+								case "font-family":
+									datum = datumContent.trim().replace("'", "");
+									break;
+								default:
+									break;
 							}
 							styleData.put(datumLabel, datum);
 						}
 						this.styleDataMap.put(styleName, styleData);
 					}
 
-					boolean formatRequiresXYShift = false;
+					boolean
+						formatRequiresXYShift = false;
 					do {
-						final String lineToLowerCase2 = _line.toLowerCase();
+						String
+							lineToLowerCase2 = _line.toLowerCase();
 						if (lineToLowerCase2.contains(nucleotideLinePrefix)) {
 							this.parseLines(reader, this.nucleotideLines);
 						} else if (lineToLowerCase2.contains(labelLinePrefix)) {
@@ -2224,124 +2210,234 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 						_line = reader.readLine();
 					} while (_line != null);
 					if (formatRequiresXYShift) {
-						float dy2 = 0.0f;
-						for (final Tuple4<String, Rectangle2D.Float, Font, Float> letter4 : this.letters) {
-							dy2 -= letter4.t1.height;
+						float
+							dy = 0.0f;
+						for (Tuple4<String, Rectangle2D.Float, Font, Float> letter4 : this.letters) {
+							dy -= letter4.t1.height;
 						}
-						dy2 /= this.letters.size() * 6.0f;
-						for (final Line2D.Float float6 : this.labelLines) {
-							final Line2D.Float line4 = float6;
-							float6.y1 += dy2;
-							final Line2D.Float float7 = line4;
-							float7.y2 += dy2;
+						dy /= this.letters.size() * 6.0f;
+						for (Line2D.Float labelLine : this.labelLines) {
+							labelLine.y1 += dy;
+							labelLine.y2 += dy;
 						}
 					}
 				}
-				for (final Line2D.Float line5 : this.labelLines) {
-					final Tuple4<String, Rectangle2D.Float, Font, Float> label3 = this.findPairLabel(line5);
-					if (label3 != null) {
-						final Vector2 v1 = new Vector2(line5.x1, line5.y1);
-						final Tuple5<String, Rectangle2D.Float, Font, Float, Integer> letter5 = (Vector2
-								.dot(Vector2.subtract(new Vector2(line5.x2, line5.y2), v1),
-										Vector2.subtract(new Vector2((float) label3.t1.getCenterX(),
-												(float) label3.t1.getCenterY()), v1)) > 0.0f)
-														? this.findPairLetter(line5)
-														: this.findPairLetter(line5);
-						if (letter5 == null) {
-							continue;
+				for (Line2D.Float _labelLine : this.labelLines) {
+					Tuple4<String, Rectangle2D.Float, Font, Float>
+						label = this.findPairLabel(_labelLine);
+					if (label != null) {
+						Vector2
+							v1 = new Vector2(_labelLine.x1, _labelLine.y1);
+						Tuple5<String, Rectangle2D.Float, Font, Float, Integer>
+							letter = (Vector2.dot(Vector2.subtract(new Vector2(_labelLine.x2, _labelLine.y2), v1), Vector2.subtract(new Vector2((float) label.t1.getCenterX(), (float) label.t1.getCenterY()), v1)) > 0.0f) ? this.findPairLetter(_labelLine) : this.findPairLetter(_labelLine);
+						if (letter != null) {
+							this.pairsData.add(new Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>(label, letter, _labelLine));
 						}
-						this.pairsData.add(
-								new Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>(
-										label3, letter5, line5));
 					}
 				}
-				final String documentName = "Foo";
+				if (pairsData.size() > 0) {
+					System.out.println(pairsData.get(0).t1.t4 + " " + pairsData.get(0).t0.t0 + "\n");
+					HashMap<Integer, ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>>
+						offsetData = new HashMap<>();
+					for (Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pairsDatum : pairsData) {
+						int
+							offset = Integer.parseInt(pairsDatum.t0.t0) - pairsDatum.t1.t4;
+						if (offsetData.containsKey(offset)) {
+							offsetData.get(offset).add(pairsDatum);
+						} else {
+							ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>
+								newList = new ArrayList<>();
+							newList.add(pairsDatum);
+							offsetData.put(offset, newList);
+						}
+					}
+					Tuple2<Integer, ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>>
+						mode = new Tuple2<>(0, new ArrayList<>());
+					offsetData.forEach((Integer offset, ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>> pairs) -> {
+						if (pairs.size() > mode.t1.size()) {
+							mode.t0 = offset;
+							mode.t1 = pairs;
+						}
+					});
+					offsetData.remove(mode.t0);
+//					System.out.println("Offset: " + mode.t0 + "\tSize: " + mode.t1.size() + "*");
+					offsetData.forEach((Integer offset, ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>> pairs) -> {
+//						System.out.println("Offset: " + offset + "\tSize: " + pairs.size());
+						int
+							delta = offset - mode.t0;
+						for (Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pair : pairs) {
+							Tuple5<String, Rectangle2D.Float, Font, Float, Integer>
+								prevT1 = pair.t1;
+							int
+								newIndex = prevT1.t4 + delta;
+							Tuple4<String, Rectangle2D.Float, Font, Float>
+								newLetter = letters.get(newIndex);
+							pair.t1 = new Tuple5<>(newLetter.t0, newLetter.t1, newLetter.t2, newLetter.t3, newIndex);
+							if (prevT1.t1.width != pair.t1.t1.width) {
+								pair.t0.t1.x += (pair.t1.t1.width - prevT1.t1.width) / 2f;
+							}
+						}
+					});
+				}
+//				if (pairsData.size() > 0) {
+//					ArrayList<Tuple2<Integer, ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Integer>>>>
+//						offsetsCounts = new ArrayList<>();
+//					for (Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pairsDatum : pairsData) {
+//						int
+//							offset = pairsDatum.t1.t4 + 1 - Integer.parseInt(pairsDatum.t0.t0);
+//						boolean
+//							newOffset = true;
+//						for (int j = 0; j < offsetsCounts.size(); j++) {
+//							Tuple2<Integer, ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Integer>>>
+//								offsetJ = offsetsCounts.get(j);
+//							if (offset == offsetJ.t0) {
+//								offsetJ.t1.add(pairsDatum.t1);
+//								newOffset = false;
+//								break;
+//							}
+//						}
+//						if (newOffset) {
+//							ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Integer>>
+//								newOffsetList = new ArrayList<>();
+//							newOffsetList.add(pairsDatum.t1);
+//							offsetsCounts.add(new Tuple2<Integer, ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Integer>>>(offset, newOffsetList));
+//						}
+//					}
+////					for (Tuple2<Integer, ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Integer>>> offsetsCount : offsetsCounts) {
+////						System.out.println("<" + offsetsCount.t0 + ", " + offsetsCount.t1.size() + ">");
+////					}
+//					Tuple2<Integer, ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Integer>>>
+//						offsetMode = offsetsCounts.get(0);
+//					int
+//						offsetModeIndex = 0;
+//					for (int i = 0; i < offsetsCounts.size(); i++) {
+//						Tuple2<Integer, ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Integer>>>
+//							offsetI = offsetsCounts.get(i);
+//						if (offsetI.t1.size() > offsetMode.t1.size()) {
+//							offsetMode = offsetI;
+//							offsetModeIndex = i;
+//						}
+//					}
+//					offsetsCounts.remove(offsetModeIndex);
+//					for (Tuple2<Integer, ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Integer>>> offsetData : offsetsCounts) {
+//						int
+//							offset = offsetData.t0;
+//						for (Tuple5<String, Rectangle2D.Float, Font, Float, Integer> letter : offsetData.t1) {
+//							System.out.print((letter.t4 + 1));
+//							letter.t4 -= offset;
+//							System.out.println(" " + (letter.t4 + 1));
+//						}
+//					}
+//					for (int i = 0; i < pairsData.size(); i++) {
+//						Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>
+//							pairsDatumI = pairsData.get(i);
+//						int
+//							newIndex = pairsDatumI.t1.t4 - offsetMode.t0;
+//						Tuple4<String, Rectangle2D.Float, Font, Float>
+//							letter = letters.get(newIndex);
+//						float
+//							dx = pairsDatumI.t1.t1.x - letter.t1.x;
+//						System.out.println(dx);
+//						pairsDatumI.t0.t1.x += dx;
+//						pairsDatumI.t1 = new Tuple5<String, Rectangle2D.Float, Font, Float, Integer>(letter.t0, letter.t1, letter.t2, letter.t3, newIndex);
+//					}
+//				}
+				String
+					documentName = "Unknown";
 				writer.println("<ComplexDocument Name='" + documentName + "'>");
 				writer.println("<SceneNodeGeom CenterX='0.0' CenterY='0.0' Scale='2.0' />");
 				writer.println("<Complex Name='" + documentName + "'>");
 				writer.println("<RNAMolecule Name='" + documentName + "'>");
 				writer.println("<NucListData StartNucID='1' DataType='NucChar.XPos.YPos'>");
-				float minX = Float.MAX_VALUE;
-				float maxX = Float.MIN_VALUE;
-				float minY = Float.MAX_VALUE;
-				float maxY = Float.MIN_VALUE;
-				for (final Tuple4<String, Rectangle2D.Float, Font, Float> letter3 : this.letters) {
-					final float x5 = letter3.t1.x;
-					final float y5 = letter3.t1.y;
-					if (x5 < minX) {
-						minX = x5;
-					} else if (x5 > maxX) {
-						maxX = x5;
+				float
+					minX = Float.MAX_VALUE,
+					maxX = Float.MIN_VALUE,
+					minY = Float.MAX_VALUE,
+					maxY = Float.MIN_VALUE;
+				for (Tuple4<String, Rectangle2D.Float, Font, Float> letter3 : this.letters) {
+					float
+						x = letter3.t1.x,
+						y = letter3.t1.y;
+					if (x < minX) {
+						minX = x;
+					} else if (x > maxX) {
+						maxX = x;
 					}
-					if (y5 < minY) {
-						minY = y5;
-					} else {
-						if (y5 <= maxY) {
-							continue;
-						}
-						maxY = y5;
+					if (y < minY) {
+						minY = y;
+					} else if (y > maxY) {
+						maxY = y;
 					}
 				}
-				final Vector2 mid = new Vector2((minX + maxX) / 2.0f, (minY + maxY) / 2.0f);
-				for (final Tuple4<String, Rectangle2D.Float, Font, Float> letter6 : this.letters) {
-					final Vector2 letterLocation = Vector2.subtract(new Vector2(letter6.t1.x, letter6.t1.y), mid);
+				Vector2
+					mid = new Vector2((minX + maxX) / 2.0f, (minY + maxY) / 2.0f);
+				for (Tuple4<String, Rectangle2D.Float, Font, Float> letter6 : this.letters) {
+					Vector2
+						letterLocation = Vector2.subtract(new Vector2(letter6.t1.x, letter6.t1.y), mid);
 					letterLocation.y = -letterLocation.y;
 					writer.println(String.valueOf(letter6.t0) + " " + letterLocation.x + " " + letterLocation.y);
 				}
 				writer.println("</NucListData>");
-				final String lineStarter = "<Nuc RefIDs='1-" + this.letters.size() + "'";
+				String
+					lineStarter = "<Nuc RefIDs='1-" + this.letters.size() + "'";
 				writer.println(String.valueOf(lineStarter) + " Color='ff0000' FontID='0' FontSize='" + 4 + "'/>");
-				writer.println(String.valueOf(lineStarter)
-						+ " IsSchematic='false' SchematicColor='0' SchematicLineWidth='1.5' SchematicBPLineWidth='1.0' SchematicBPGap='2.0' SchematicFPGap='2.0' SchematicTPGap='2.0' IsNucPath='false' NucPathColor='ff0000' NucPathLineWidth='0.0' />");
-				for (final Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pair : this.pairsData) {
-					final double strokeWidth = (pair.t0.t3 == null) ? ((pair.t1.t3 == null) ? 0.2f : pair.t1.t3)
-							: pair.t0.t3;
-					writer.println("<Nuc RefID='" + pair.t1.t4 + "'>");
+				writer.println(String.valueOf(lineStarter) + " IsSchematic='false' SchematicColor='0' SchematicLineWidth='1.5' SchematicBPLineWidth='1.0' SchematicBPGap='2.0' SchematicFPGap='2.0' SchematicTPGap='2.0' IsNucPath='false' NucPathColor='ff0000' NucPathLineWidth='0.0' />");
+				Tuple4<String, Rectangle2D.Float, Font, Float>
+					letter0 = this.letters.get(0);
+				Tuple5<String, Rectangle2D.Float, Font, Float, Integer>
+					augmentedLetter0 = new Tuple5<>(letter0.t0, letter0.t1, letter0.t2, letter0.t3, -1);
+				for (Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pair : this.pairsData) {
+					double
+						strokeWidth = (pair.t0.t3 == null) ? ((pair.t1.t3 == null) ? 0.2f : pair.t1.t3) : pair.t0.t3;
+					writer.println("<Nuc RefID='" + (pair.t1.t4 + 1) + "'>");
 					writer.println("<LabelList>");
-					final double centerX = pair.t1.t1.getCenterX();
-					final double centerY = pair.t1.t1.getCenterY();
-					final double dx2 = pair.t2.x1 - centerX;
-					final double dy3 = -(pair.t2.y1 - centerY);
-					writer.println("l " + dx2 + " " + dy3 + " " + (pair.t2.x2 - centerX) + " " + -(pair.t2.y2 - centerY)
-							+ " " + strokeWidth + " " + 255 + " 0.0 0 0 0 0");
-					writer.println("s " + (pair.t0.t1.getCenterX() - pair.t1.t1.getCenterX()) + " "
-							+ (pair.t1.t1.getCenterY() - pair.t0.t1.getCenterY()) + " 0.0 " + pair.t0.t2.getSize()
-							+ " 0 " + 255 + " \"" + pair.t0.t0 + "\"");
+					double
+						centerX = pair.t1.t1.getCenterX(),
+						centerY = pair.t1.t1.getCenterY();
+					writer.println("l " + (pair.t2.x1 - centerX) + " " + (centerY - pair.t2.y1) + " " + (pair.t2.x2 - centerX) + " " + (centerY - pair.t2.y2) + " " + strokeWidth + " " + 255 + " 0.0 0 0 0 0");
+					writer.println("s " + (pair.t0.t1.getCenterX() - centerX) + " " + (centerY - pair.t0.t1.getCenterY()) + " 0.0 " + pair.t0.t2.getSize() + " 0 " + 255 + " \"" + pair.t0.t0 + "\"");
 					writer.println("</LabelList>");
 					writer.println("</Nuc>");
+//					double
+//						strokeWidth = (pair.t0.t3 == null) ? ((pair.t1.t3 == null) ? 0.2f : pair.t1.t3) : pair.t0.t3;
+//					writer.println("<Nuc RefID='" + (pair.t1.t4 + 1) + "'>");
+//					writer.println("<LabelList>");
+//					double
+//						centerX = pair.t1.t1.getCenterX(),
+//						centerY = pair.t1.t1.getCenterY();
+//					writer.println("l " + (pair.t2.x1 - centerX) + " " + (centerY - pair.t2.y1) + " " + (pair.t2.x2 - centerX) + " " + (centerY - pair.t2.y2) + " " + strokeWidth + " " + 255 + " 0.0 0 0 0 0");
+//					writer.println("s " + (pair.t0.t1.getCenterX() - centerX) + " " + (centerY - pair.t0.t1.getCenterY()) + " 0.0 " + pair.t0.t2.getSize() + " 0 " + 255 + " \"" + pair.t0.t0 + "\"");
+//					writer.println("</LabelList>");
+//					writer.println("</Nuc>");
 				}
-				float minimumDistance = Float.MAX_VALUE;
-				float maximumDistance = 0.0f;
-				for (final Line2D.Float nucleotideLine : this.nucleotideLines) {
-					final float distance = this.distance(nucleotideLine);
+				float
+					minimumDistance = Float.MAX_VALUE,
+					maximumDistance = 0.0f;
+				for (Line2D.Float nucleotideLine : this.nucleotideLines) {
+					float
+						distance = this.distance(nucleotideLine);
 					if (distance < minimumDistance) {
 						minimumDistance = distance;
-					} else {
-						if (distance <= maximumDistance) {
-							continue;
-						}
+					} else if (distance > maximumDistance) {
 						maximumDistance = distance;
 					}
 				}
-				final double logMaximumDistance = Math.log(maximumDistance);
-				final double logMinimumDistance = Math.log(minimumDistance);
-				final double interpolatedDistance = Math
-						.exp(logMinimumDistance + (logMaximumDistance - logMinimumDistance) * 0.75);
+				double 
+					logMaximumDistance = Math.log(maximumDistance),
+					logMinimumDistance = Math.log(minimumDistance),
+					interpolatedDistance = Math.exp(logMinimumDistance + (logMaximumDistance - logMinimumDistance) * 0.75);
 				for (Line2D.Float nucleotideLine2 : this.nucleotideLines) {
-					final float distanceScalar = (float) interpolatedDistance / (this.distance(nucleotideLine2) * 2.0f);
+					float
+						distanceScalar = (float) interpolatedDistance / (this.distance(nucleotideLine2) * 2.0f);
 					nucleotideLine2 = this.scaledLine(nucleotideLine2, distanceScalar, distanceScalar);
-					final Tuple5<String, Rectangle2D.Float, Font, Float, Integer> letter7 = this
-							.findClosestLetter(this.scaledLine(nucleotideLine2, 0.0f, this.lineExtensionScalar));
-					final Tuple5<String, Rectangle2D.Float, Font, Float, Integer> letter8 = this
-							.findClosestLetter(this.scaledLine(nucleotideLine2, this.lineExtensionScalar, 0.0f));
+					Tuple5<String, Rectangle2D.Float, Font, Float, Integer>
+						letter7 = this.findClosestLetter(this.scaledLine(nucleotideLine2, 0.0f, this.lineExtensionScalar)),
+						letter8 = this.findClosestLetter(this.scaledLine(nucleotideLine2, this.lineExtensionScalar, 0.0f));
 					if (letter7.t4 != (int) letter8.t4) {
-						writer.println(
-								"<BasePairs nucID='" + letter7.t4 + "' length='1' bpNucID='" + letter8.t4 + "' />");
+						writer.println("<BasePairs nucID='" + (letter7.t4 + 1) + "' length='1' bpNucID='" + (letter8.t4 + 1) + "' />");
 					} else {
-						this.debugLines.add(new Tuple2<Line2D.Float, Color>(
-								this.scaledLine(nucleotideLine2, 0.0f, this.lineExtensionScalar), Color.ORANGE));
-						this.debugLines.add(new Tuple2<Line2D.Float, Color>(
-								this.scaledLine(nucleotideLine2, this.lineExtensionScalar, 0.0f), Color.MAGENTA));
+						this.debugLines.add(new Tuple2<>(this.scaledLine(nucleotideLine2, 0.0f, this.lineExtensionScalar), Color.ORANGE));
+						this.debugLines.add(new Tuple2<>(this.scaledLine(nucleotideLine2, this.lineExtensionScalar, 0.0f), Color.MAGENTA));
 					}
 				}
 				writer.println("</RNAMolecule>");
@@ -2361,14 +2457,14 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 //				origin = new Vector2();
 //			JPanel
 //				panel = new JPanel() {
-//					public void paintComponent(final Graphics g) {
+//					public void paintComponent(Graphics g) {
 //						super.paintComponent(g);
-//						final Graphics2D g2D = (Graphics2D) g;
+//						Graphics2D g2D = (Graphics2D) g;
 //						g2D.scale(SVGToXRNAParser.this.scale, SVGToXRNAParser.this.scale);
 //						g2D.translate(origin.x, origin.y);
 //						g.setColor(Color.RED);
 //						g2D.setStroke(new BasicStroke(0.2f));
-//						for (final Tuple4<String, Rectangle2D.Float, Font, Float> label : SVGToXRNAParser.this.labels) {
+//						for (Tuple4<String, Rectangle2D.Float, Font, Float> label : SVGToXRNAParser.this.labels) {
 //							if (label.t3 != null) {
 //								g2D.setStroke(new BasicStroke(label.t3));
 //							}
@@ -2376,7 +2472,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 //							g2D.setFont(label.t2);
 //							g2D.drawString(label.t0, label.t1.x, label.t1.y + label.t1.height);
 //						}
-//						for (final Tuple4<String, Rectangle2D.Float, Font, Float> letter : SVGToXRNAParser.this.letters) {
+//						for (Tuple4<String, Rectangle2D.Float, Font, Float> letter : SVGToXRNAParser.this.letters) {
 //							if (letter.t3 != null) {
 //								g2D.setStroke(new BasicStroke(letter.t3));
 //							}
@@ -2384,7 +2480,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 //							g2D.setFont(letter.t2);
 //							g2D.drawString(letter.t0, letter.t1.x, letter.t1.y + letter.t1.height);
 //						}
-//						for (final Tuple4<String, Rectangle2D.Float, Font, Float> helixLabel : SVGToXRNAParser.this.helixLabels) {
+//						for (Tuple4<String, Rectangle2D.Float, Font, Float> helixLabel : SVGToXRNAParser.this.helixLabels) {
 //							if (helixLabel.t3 != null) {
 //								g2D.setStroke(new BasicStroke(helixLabel.t3));
 //							}
@@ -2395,19 +2491,19 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 //							g2D.drawString(helixLabel.t0, helixLabel.t1.x, helixLabel.t1.y + helixLabel.t1.height);
 //						}
 //						g2D.setColor(Color.MAGENTA);
-//						for (final Line2D.Float line : SVGToXRNAParser.this.nucleotideLines) {
+//						for (Line2D.Float line : SVGToXRNAParser.this.nucleotideLines) {
 //							g2D.draw(line);
 //						}
 //						g2D.setColor(Color.GREEN);
-//						for (final Line2D.Float line : SVGToXRNAParser.this.labelLines) {
+//						for (Line2D.Float line : SVGToXRNAParser.this.labelLines) {
 //							g2D.draw(line);
 //						}
-//						for (final Tuple2<Line2D.Float, Color> line2 : SVGToXRNAParser.this.debugLines) {
+//						for (Tuple2<Line2D.Float, Color> line2 : SVGToXRNAParser.this.debugLines) {
 //							g2D.setColor(line2.t1);
 //							g2D.draw(line2.t0);
 //						}
-//						final Random random = new Random(0L);
-//						for (final Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pairDatum : SVGToXRNAParser.this.pairsData) {
+//						Random random = new Random(0L);
+//						for (Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pairDatum : SVGToXRNAParser.this.pairsData) {
 //							g2D.setColor(new Color(100 + random.nextInt(155), 100 + random.nextInt(155),
 //									100 + random.nextInt(155)));
 //							if (pairDatum.t0.t3 != null) {
@@ -2417,8 +2513,8 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 //							if (pairDatum.t1.t3 != null) {
 //								g2D.setStroke(new BasicStroke(pairDatum.t0.t3));
 //							}
-//							final Rectangle2D.Float modifiedT1 = SVGToXRNAParser.this.modifyLetterBounds(pairDatum.t1.t1);
-//							final float maximumAxis = Math.max(modifiedT1.width, modifiedT1.height);
+//							Rectangle2D.Float modifiedT1 = SVGToXRNAParser.this.modifyLetterBounds(pairDatum.t1.t1);
+//							float maximumAxis = Math.max(modifiedT1.width, modifiedT1.height);
 //							g2D.draw(new Ellipse2D.Float(modifiedT1.x, modifiedT1.y, maximumAxis, maximumAxis));
 //						}
 //					}
@@ -2426,7 +2522,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 //			panel.setBackground(Color.BLACK);
 //			frame.addKeyListener(new KeyAdapter() {
 //				@Override
-//				public void keyPressed(final KeyEvent event) {
+//				public void keyPressed(KeyEvent event) {
 //					switch (event.getKeyCode()) {
 //						case KeyEvent.VK_ESCAPE: {
 //							System.exit(0);
@@ -2442,7 +2538,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 //			});
 //			frame.addMouseListener(new MouseAdapter() {
 //				@Override
-//				public void mousePressed(final MouseEvent event) {
+//				public void mousePressed(MouseEvent event) {
 //					Point2D
 //						p2D = event.getLocationOnScreen();
 //					mouse.x = (float) p2D.getX();
@@ -2451,7 +2547,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 //			});
 //			frame.addMouseMotionListener(new MouseMotionAdapter() {
 //				@Override
-//				public void mouseDragged(final MouseEvent event) {
+//				public void mouseDragged(MouseEvent event) {
 //					Point2D
 //						p2D = event.getLocationOnScreen();
 //					origin.x += (float) ((p2D.getX() - mouse.x) / SVGToXRNAParser.this.scale);
@@ -2467,117 +2563,125 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 //			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		}
 
-		private float distance(final Line2D.Float line) {
+		private float distance(Line2D.Float line) {
 			return (float) line.getP1().distance(line.getP2());
 		}
 
-		private Tuple4<String, Rectangle2D.Float, Font, Float> findPairLabel(final Line2D.Float line) {
-			for (final Tuple4<String, Rectangle2D.Float, Font, Float> label : this.labels) {
-				final Rectangle2D.Float t1 = this.modifyLabelBounds(label.t1);
-				final float x0 = t1.x;
-				final float y0 = t1.y;
-				final float x2 = t1.x + t1.width;
-				final float y2 = t1.y + t1.height;
-				final Line2D.Float edge0 = new Line2D.Float(x0, y0, x2, y0);
-				final Line2D.Float edge2 = new Line2D.Float(x2, y0, x2, y2);
-				final Line2D.Float edge3 = new Line2D.Float(x2, y2, x0, y2);
-				final Line2D.Float edge4 = new Line2D.Float(x0, y2, x0, y0);
-				if (line.intersectsLine(edge0) || line.intersectsLine(edge2) || line.intersectsLine(edge3)
-						|| line.intersectsLine(edge4)) {
+		private Tuple4<String, Rectangle2D.Float, Font, Float> findPairLabel(Line2D.Float line) {
+			for (Tuple4<String, Rectangle2D.Float, Font, Float> label : this.labels) {
+				Rectangle2D.Float
+					t1 = this.modifyLabelBounds(label.t1);
+				float
+					x0 = t1.x,
+					y0 = t1.y,
+					x1 = t1.x + t1.width,
+					y1 = t1.y + t1.height;
+				Line2D.Float
+					edge0 = new Line2D.Float(x0, y0, x1, y0),
+					edge1 = new Line2D.Float(x1, y0, x1, y1),
+					edge2 = new Line2D.Float(x1, y1, x0, y1),
+					edge3 = new Line2D.Float(x0, y1, x0, y0);
+				if (line.intersectsLine(edge0) || line.intersectsLine(edge1) || line.intersectsLine(edge2) || line.intersectsLine(edge3)) {
 					return label;
 				}
 			}
-			for (final Tuple4<String, Rectangle2D.Float, Font, Float> label : this.labels) {
-				final Rectangle2D.Float t1 = this.modifyLetterBounds(label.t1);
-				final float x0 = t1.x;
-				final float y0 = t1.y;
-				final float x2 = t1.x + t1.width;
-				final float y2 = t1.y + t1.height;
-				final Line2D.Float scaledLine = this.scaledLine(line, this.lineExtensionScalar,
-						this.lineExtensionScalar);
-				final Line2D.Float edge5 = new Line2D.Float(x0, y0, x2, y0);
-				final Line2D.Float edge6 = new Line2D.Float(x2, y0, x2, y2);
-				final Line2D.Float edge7 = new Line2D.Float(x2, y2, x0, y2);
-				final Line2D.Float edge8 = new Line2D.Float(x0, y2, x0, y0);
-				if (scaledLine.intersectsLine(edge5) || scaledLine.intersectsLine(edge6)
-						|| scaledLine.intersectsLine(edge7) || scaledLine.intersectsLine(edge8)) {
+			for (Tuple4<String, Rectangle2D.Float, Font, Float> label : this.labels) {
+				Rectangle2D.Float
+					t1 = this.modifyLetterBounds(label.t1);
+				float
+					x0 = t1.x,
+					y0 = t1.y,
+					x1 = t1.x + t1.width,
+					y1 = t1.y + t1.height;
+				Line2D.Float
+					scaledLine = this.scaledLine(line, this.lineExtensionScalar, this.lineExtensionScalar),
+					edge0 = new Line2D.Float(x0, y0, x1, y0),
+					edge1 = new Line2D.Float(x1, y0, x1, y1),
+					edge2 = new Line2D.Float(x1, y1, x0, y1),
+					edge3 = new Line2D.Float(x0, y1, x0, y0);
+				if (scaledLine.intersectsLine(edge0) || scaledLine.intersectsLine(edge1) || scaledLine.intersectsLine(edge2) || scaledLine.intersectsLine(edge3)) {
 					return label;
 				}
 			}
-			double minimumDistanceSquared = Double.MAX_VALUE;
-			Tuple4<String, Rectangle2D.Float, Font, Float> minimumDistanceLabel = null;
-			for (final Tuple4<String, Rectangle2D.Float, Font, Float> label2 : this.labels) {
-				final Rectangle2D.Float t2 = this.modifyLabelBounds(label2.t1);
-				final float x3 = t2.x;
-				final float y3 = t2.y;
-				final float x4 = t2.x + t2.width;
-				final float y4 = t2.y + t2.height;
-				final double currentMinimumDistanceSquared = Math.min(Math
-						.min(Math.min(line.ptSegDistSq(x3, y3), line.ptSegDistSq(x4, y3)), line.ptSegDistSq(x4, y4)),
-						line.ptSegDistSq(x3, y4));
+			double
+				minimumDistanceSquared = Double.MAX_VALUE;
+			Tuple4<String, Rectangle2D.Float, Font, Float>
+				minimumDistanceLabel = null;
+			for (Tuple4<String, Rectangle2D.Float, Font, Float> label2 : this.labels) {
+				Rectangle2D.Float
+					t2 = this.modifyLabelBounds(label2.t1);
+				float
+					x3 = t2.x,
+					y3 = t2.y,
+					x4 = t2.x + t2.width,
+					y4 = t2.y + t2.height;
+				double
+					currentMinimumDistanceSquared = Math.min(Math.min(Math.min(line.ptSegDistSq(x3, y3), line.ptSegDistSq(x4, y3)), line.ptSegDistSq(x4, y4)), line.ptSegDistSq(x3, y4));
 				if (currentMinimumDistanceSquared < minimumDistanceSquared) {
 					minimumDistanceSquared = currentMinimumDistanceSquared;
 					minimumDistanceLabel = label2;
 				}
 			}
-			return (minimumDistanceSquared
-					/ new Point2D.Float(line.x1, line.y1).distanceSq(new Point2D.Float(line.x2, line.y2)) < 15.0)
-							? minimumDistanceLabel
-							: null;
+			return (minimumDistanceSquared / new Point2D.Float(line.x1, line.y1).distanceSq(new Point2D.Float(line.x2, line.y2)) < 15.0) ? minimumDistanceLabel : null;
 		}
 
-		private Tuple5<String, Rectangle2D.Float, Font, Float, Integer> findPairLetter(final Line2D.Float line) {
-			for (int index = 0; index < this.letters.size(); ++index) {
-				final Tuple4<String, Rectangle2D.Float, Font, Float> letter = this.letters.get(index);
-				final float maximumRadius = Math.max(letter.t1.width, letter.t1.height) / 2.0f;
-				final Rectangle2D.Float modifiedT1 = this.modifyLetterBounds(letter.t1);
+		private Tuple5<String, Rectangle2D.Float, Font, Float, Integer> findPairLetter(Line2D.Float line) {
+			for (int index = 0; index < this.letters.size(); index++) {
+				Tuple4<String, Rectangle2D.Float, Font, Float>
+					letter = this.letters.get(index);
+				float
+					maximumRadius = Math.max(letter.t1.width, letter.t1.height) / 2.0f;
+				Rectangle2D.Float
+					modifiedT1 = this.modifyLetterBounds(letter.t1);
 				if (line.ptSegDist(modifiedT1.getCenterX(), modifiedT1.getCenterY()) <= maximumRadius) {
-					return new Tuple5<String, Rectangle2D.Float, Font, Float, Integer>(letter.t0, letter.t1, letter.t2,
-							letter.t3, index + 1);
+					return new Tuple5<String, Rectangle2D.Float, Font, Float, Integer>(letter.t0, letter.t1, letter.t2, letter.t3, index);
 				}
 			}
 			return this.findClosestLetter(this.scaledLine(line, this.lineExtensionScalar, this.lineExtensionScalar));
 		}
 
-		private Tuple5<String, Rectangle2D.Float, Font, Float, Integer> findClosestLetter(final Line2D.Float line) {
-			Tuple5<String, Rectangle2D.Float, Font, Float, Integer> closestPairLetter = null;
-			double closestDistance = Double.MAX_VALUE;
-			for (int index = 0; index < this.letters.size(); ++index) {
-				final Tuple4<String, Rectangle2D.Float, Font, Float> letter = this.letters.get(index);
-				final Rectangle2D.Float t1 = this.modifyLetterBounds(letter.t1);
-				final double newDistance = line.ptSegDist(t1.getCenterX(), t1.getCenterY());
+		private Tuple5<String, Rectangle2D.Float, Font, Float, Integer> findClosestLetter(Line2D.Float line) {
+			Tuple5<String, Rectangle2D.Float, Font, Float, Integer>
+				closestPairLetter = null;
+			double
+				closestDistance = Double.MAX_VALUE;
+			for (int index = 0; index < this.letters.size(); index++) {
+				Tuple4<String, Rectangle2D.Float, Font, Float>
+					letter = this.letters.get(index);
+				Rectangle2D.Float
+					t1 = this.modifyLetterBounds(letter.t1);
+				double
+					newDistance = line.ptSegDist(t1.getCenterX(), t1.getCenterY());
 				if (newDistance < closestDistance) {
 					closestDistance = newDistance;
-					closestPairLetter = new Tuple5<String, Rectangle2D.Float, Font, Float, Integer>(letter.t0,
-							letter.t1, letter.t2, letter.t3, index + 1);
+					closestPairLetter = new Tuple5<String, Rectangle2D.Float, Font, Float, Integer>(letter.t0, letter.t1, letter.t2, letter.t3, index);
 				}
 			}
 			return closestPairLetter;
 		}
 
-		private Rectangle2D.Float modifyLabelBounds(final Rectangle2D.Float rect) {
-			return new Rectangle2D.Float(rect.x - rect.width / 20.0f * 1.25f, rect.y + rect.height / 10.0f, rect.width,
-					rect.height);
+		private Rectangle2D.Float modifyLabelBounds(Rectangle2D.Float rect) {
+			return new Rectangle2D.Float(rect.x - rect.width / 20.0f * 1.25f, rect.y + rect.height / 10.0f, rect.width, rect.height);
 		}
 
-		private Rectangle2D.Float modifyLetterBounds(final Rectangle2D.Float rect) {
-			final float maximumDimension = Math.max(rect.width, rect.height);
-			return new Rectangle2D.Float(rect.x - maximumDimension * 0.15f, rect.y + maximumDimension * 0.125f,
-					rect.width, rect.height);
+		private Rectangle2D.Float modifyLetterBounds(Rectangle2D.Float rect) {
+			float
+				maximumDimension = Math.max(rect.width, rect.height);
+			return new Rectangle2D.Float(rect.x - maximumDimension * 0.15f, rect.y + maximumDimension * 0.125f, rect.width, rect.height);
 		}
 
-		private Line2D.Float scaledLine(final Line2D.Float line, final float scalar0, final float scalar1) {
-			final float lineX1 = line.x1;
-			final float lineY1 = line.y1;
-			final float lineX2 = line.x2;
-			final float lineY2 = line.y2;
-			final float xHalf = (lineX1 + lineX2) / 2.0f;
-			final float yHalf = (lineY1 + lineY2) / 2.0f;
-			return new Line2D.Float(xHalf + (lineX1 - xHalf) * scalar0, yHalf + (lineY1 - yHalf) * scalar0,
-					xHalf + (lineX2 - xHalf) * scalar1, yHalf + (lineY2 - yHalf) * scalar1);
+		private Line2D.Float scaledLine(Line2D.Float line, float scalar0, float scalar1) {
+			float
+				lineX1 = line.x1,
+				lineY1 = line.y1,
+				lineX2 = line.x2,
+				lineY2 = line.y2,
+				xHalf = (lineX1 + lineX2) / 2.0f,
+				yHalf = (lineY1 + lineY2) / 2.0f;
+			return new Line2D.Float(xHalf + (lineX1 - xHalf) * scalar0, yHalf + (lineY1 - yHalf) * scalar0, xHalf + (lineX2 - xHalf) * scalar1, yHalf + (lineY2 - yHalf) * scalar1);
 		}
 
-		private void mouseWheelMoved(final double deltaWheel) {
+		private void mouseWheelMoved(double deltaWheel) {
 			this.scale *= (float) Math.pow(this.deltaScalar, deltaWheel);
 			if (this.scale < this.minimumScale) {
 				this.scale = this.minimumScale;
@@ -2586,42 +2690,37 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			}
 		}
 
-		private void parseLines(final BufferedReader reader, final ArrayList<Line2D.Float> endPoints)
-				throws IOException {
+		private void parseLines(BufferedReader reader, ArrayList<Line2D.Float> endPoints) throws IOException {
 			for (String line = reader.readLine(); line != null && !line.contains("</g>"); line = reader.readLine()) {
 				line = line.replaceAll("\\s+", "");
-				try {
-					endPoints.add(new Line2D.Float(Float.parseFloat(this.boundedSubstring(line, "x1=\"", "\"")),
-							Float.parseFloat(this.boundedSubstring(line, "y1=\"", "\"")),
-							Float.parseFloat(this.boundedSubstring(line, "x2=\"", "\"")),
-							Float.parseFloat(this.boundedSubstring(line, "y2=\"", "\""))));
-				} catch (StringIndexOutOfBoundsException ex) {
-					throw ex;
-				}
+				endPoints.add(new Line2D.Float(Float.parseFloat(this.boundedSubstring(line, "x1=\"", "\"")), Float.parseFloat(this.boundedSubstring(line, "y1=\"", "\"")), Float.parseFloat(this.boundedSubstring(line, "x2=\"", "\"")), Float.parseFloat(this.boundedSubstring(line, "y2=\"", "\""))));
 			}
 		}
 
-		private void parseText(final BufferedReader reader,
-				final ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>> labels) throws IOException {
+		private void parseText(BufferedReader reader, ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>> labels) throws IOException {
 			for (String line = reader.readLine(); line != null && !line.contains("</g>"); line = reader.readLine()) {
-				final String[] matrixEntries = this.boundedSubstring(line, "matrix(", ")").split("\\s+");
-				final Vector2 position = new Vector2(Float.parseFloat(matrixEntries[4]),
-						Float.parseFloat(matrixEntries[5]));
-				final String text = this.boundedSubstring(line, ">", "<");
-				final HashMap<String, Object> classAggregate = new HashMap<String, Object>();
+				String[]
+					matrixEntries = this.boundedSubstring(line, "matrix(", ")").split("\\s+");
+				Vector2
+					position = new Vector2(Float.parseFloat(matrixEntries[4]), Float.parseFloat(matrixEntries[5]));
+				String
+					text = this.boundedSubstring(line, ">", "<");
+				HashMap<String, Object>
+					classAggregate = new HashMap<>();
 				String[] split;
-				for (int length = (split = this.boundedSubstring(line, "class=\"", "\"")
-						.split(" ")).length, i = 0; i < length; ++i) {
-					final String _class = split[i];
-					final HashMap<String, Object> classData = this.styleDataMap.get(_class);
+				for (int length = (split = this.boundedSubstring(line, "class=\"", "\"").split(" ")).length, i = 0; i < length; ++i) {
+					String
+						_class = split[i];
+					HashMap<String, Object>
+						classData = this.styleDataMap.get(_class);
 					try {
-						for (final Map.Entry<String, Object> classDatum : classData.entrySet()) {
+						for (Map.Entry<String, Object> classDatum : classData.entrySet()) {
 							classAggregate.put(classDatum.getKey(), classDatum.getValue());
 						}
 					} catch (NullPointerException ex) {
 						System.out.println(line);
 						int index = 0;
-						for (final String key : this.styleDataMap.keySet()) {
+						for (String key : this.styleDataMap.keySet()) {
 							System.out.println("key " + index + ": " + key);
 							++index;
 						}
@@ -2629,18 +2728,19 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 						throw ex;
 					}
 				}
-				final float fontSize = (float) classAggregate.get("font-size");
-				final Font font = new Font((String) classAggregate.get("font-family"), 0, (int) fontSize);
-				final FontMetrics metrics = ComplexParentFrame.frame.getFontMetrics(font);
-				labels.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(
-						text, new Rectangle2D.Float(position.x, position.y - fontSize,
-								(float) metrics.stringWidth(text), fontSize),
-						font, (Float) classAggregate.get("stroke-width")));
+				float
+					fontSize = (float) classAggregate.get("font-size");
+				Font
+					font = new Font((String) classAggregate.get("font-family"), 0, (int) fontSize);
+				FontMetrics
+					metrics = ComplexParentFrame.frame.getFontMetrics(font);
+				labels.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(text, new Rectangle2D.Float(position.x, position.y - fontSize, (float) metrics.stringWidth(text), fontSize), font, (Float) classAggregate.get("stroke-width")));
 			}
 		}
 
-		private String boundedSubstring(final String string, final String query, final String suffix) {
-			final int queryIndexPlusQueryLength = string.indexOf(query) + query.length();
+		private String boundedSubstring(String string, String query, String suffix) {
+			int
+				queryIndexPlusQueryLength = string.indexOf(query) + query.length();
 			try {
 				return string.substring(queryIndexPlusQueryLength, string.indexOf(suffix, queryIndexPlusQueryLength));
 			} catch (StringIndexOutOfBoundsException ex) {
@@ -2650,21 +2750,26 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		}
 
 		private class Tuple2<T0, T1> {
-			private T0 t0;
-			private T1 t1;
+			private T0
+				t0;
+			private T1
+				t1;
 
-			private Tuple2(final T0 t0, final T1 t1) {
+			private Tuple2(T0 t0, T1 t1) {
 				this.t0 = t0;
 				this.t1 = t1;
 			}
 		}
 
 		private class Tuple3<T0, T1, T2> {
-			private T0 t0;
-			private T1 t1;
-			private T2 t2;
+			private T0
+				t0;
+			private T1
+				t1;
+			private T2
+				t2;
 
-			private Tuple3(final T0 t0, final T1 t1, final T2 t2) {
+			private Tuple3(T0 t0, T1 t1, T2 t2) {
 				this.t0 = t0;
 				this.t1 = t1;
 				this.t2 = t2;
@@ -2672,12 +2777,16 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		}
 
 		private class Tuple4<T0, T1, T2, T3> {
-			private T0 t0;
-			private T1 t1;
-			private T2 t2;
-			private T3 t3;
+			private T0
+				t0;
+			private T1
+				t1;
+			private T2
+				t2;
+			private T3
+				t3;
 
-			private Tuple4(final T0 t0, final T1 t1, final T2 t2, final T3 t3) {
+			private Tuple4(T0 t0, T1 t1, T2 t2, T3 t3) {
 				this.t0 = t0;
 				this.t1 = t1;
 				this.t2 = t2;
@@ -2686,13 +2795,18 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		}
 
 		private class Tuple5<T0, T1, T2, T3, T4> {
-			private T0 t0;
-			private T1 t1;
-			private T2 t2;
-			private T3 t3;
-			private T4 t4;
+			private T0
+				t0;
+			private T1
+				t1;
+			private T2
+				t2;
+			private T3
+				t3;
+			private T4
+				t4;
 
-			private Tuple5(final T0 t0, final T1 t1, final T2 t2, final T3 t3, final T4 t4) {
+			private Tuple5(T0 t0, T1 t1, T2 t2, T3 t3, T4 t4) {
 				this.t0 = t0;
 				this.t1 = t1;
 				this.t2 = t2;
@@ -2701,456 +2815,6 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			}
 		}
 	}
-
-	/*
-	 * private class SVGToXRNAParser { private HashMap<String, HashMap<String,
-	 * Object>> styleDataMap = new HashMap<String, HashMap<String, Object>>();
-	 * private ArrayList<Line2D.Float> nucleotideLines = new ArrayList<>(),
-	 * labelLines = new ArrayList<>(); private ArrayList<Tuple5<String, Vector2,
-	 * Rectangle2D.Float, Font, Float>> letters = new ArrayList<>(), helixLabels =
-	 * new ArrayList<>(), labels = new ArrayList<>(); private float minimumScale =
-	 * 0.75f, maximumScale = 8f, scale = 1f, deltaScalar = 1.05f,
-	 * lineExtensionScalar = 3.5f; private ArrayList<Tuple3<Tuple5<String, Vector2,
-	 * Rectangle2D.Float, Font, Float>, Tuple6<String, Vector2, Rectangle2D.Float,
-	 * Font, Float, Integer>, Line2D.Float>> pairsData = new ArrayList<>(); private
-	 * ArrayList<Tuple2<Line2D.Float, Color>> debugLines = new ArrayList<>();
-	 * 
-	 * private SVGToXRNAParser() throws Exception { File temporaryXrna = new
-	 * File("C:\\Users\\caede\\Desktop\\temp.xrna");// File.createTempFile("temp",
-	 * // ".xrna"); // temporaryXrna.deleteOnExit(); try (BufferedReader reader =
-	 * new BufferedReader(new FileReader(getCurrentInputFile())); PrintWriter writer
-	 * = new PrintWriter(new FileWriter(temporaryXrna))) { boolean
-	 * nonstandardSVGFormat = true; String nucleotideLinePrefix =
-	 * "nucleotide_lines", labelLinePrefix = "labels_lines", lettersLinePrefix =
-	 * "letters", sequenceLinePrefix = "sequence", helixLinePrefix = "helix_labels",
-	 * labelsLinePrefix = "labels_text", _line = reader.readLine();
-	 * ArrayList<String> lines = new ArrayList<>(), styleLines = new ArrayList<>();
-	 * for (; _line != null; _line = reader.readLine()) { String lineToLowerCase =
-	 * _line.toLowerCase(); if (lineToLowerCase.contains("<style")) { for (_line =
-	 * reader.readLine(); _line != null; _line = reader.readLine()) {
-	 * lineToLowerCase = _line.toLowerCase(); if
-	 * (lineToLowerCase.contains("</style>")) { break; } else {
-	 * styleLines.add(lineToLowerCase); } } } else if
-	 * (lineToLowerCase.contains(nucleotideLinePrefix) ||
-	 * lineToLowerCase.contains(labelLinePrefix) ||
-	 * lineToLowerCase.contains(lettersLinePrefix) ||
-	 * lineToLowerCase.contains(sequenceLinePrefix) ||
-	 * lineToLowerCase.contains(helixLinePrefix) ||
-	 * lineToLowerCase.contains(labelsLinePrefix)) { nonstandardSVGFormat = false;
-	 * lines.clear(); break; } else { lines.add(_line); } } if
-	 * (nonstandardSVGFormat) { FontMetrics metrics = null; Font font = null; float
-	 * fontSize = 4f; for (String line : lines) { String fontFamily = "Helvetica";
-	 * if (line.contains("style")) { fontSize =
-	 * Float.parseFloat(this.boundedSubstring(line, "font-size:", "px").trim());
-	 * fontFamily = this.boundedSubstring(line, "font-family", ";").trim(); } font =
-	 * new Font(fontFamily, Font.PLAIN, (int) Math.round(fontSize)); metrics =
-	 * ComplexParentFrame.frame.getFontMetrics(font); break; } for (String line :
-	 * lines) { if (line.contains("class=\"numbering-line\"")) { float x1 =
-	 * Float.parseFloat(this.boundedSubstring(line, "x1=\"", "\"")), y1 =
-	 * Float.parseFloat(this.boundedSubstring(line, "y1=\"", "\"")), x2 =
-	 * Float.parseFloat(this.boundedSubstring(line, "x2=\"", "\"")), y2 =
-	 * Float.parseFloat(this.boundedSubstring(line, "y2=\"", "\""));
-	 * labelLines.add(new Line2D.Float(x1, y1, x2, y2)); } else if
-	 * (line.contains("<line")) { float x1 =
-	 * Float.parseFloat(this.boundedSubstring(line, "x1=\"", "\"")), y1 =
-	 * Float.parseFloat(this.boundedSubstring(line, "y1=\"", "\"")), x2 =
-	 * Float.parseFloat(this.boundedSubstring(line, "x2=\"", "\"")), y2 =
-	 * Float.parseFloat(this.boundedSubstring(line, "y2=\"", "\""));
-	 * nucleotideLines.add(new Line2D.Float(x1, y1, x2, y2)); } else if
-	 * (line.contains("class=\"numbering-label\"")) { float x =
-	 * Float.parseFloat(this.boundedSubstring(line, "x=\"", "\"")), y =
-	 * Float.parseFloat(this.boundedSubstring(line, "y=\"", "\"")); String label =
-	 * this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<")
-	 * .strip(); float width = metrics.stringWidth(label); x -= width / 2f; y -=
-	 * fontSize; labels.add(new Tuple5<>(label, null, new Rectangle2D.Float(x, y,
-	 * width, fontSize), font, null)); // labels.add(new Tuple5<>(label, new
-	 * Vector2(x, y), new Rectangle2D.Float(x, y, width, fontSize), font, null)); }
-	 * else if (line.contains("title")) { float x =
-	 * Float.parseFloat(this.boundedSubstring(line, "x=\"", "\"")), y =
-	 * Float.parseFloat(this.boundedSubstring(line, "y=\"", "\"")) - fontSize;
-	 * String letter = this.boundedSubstring(line.substring(line.indexOf("text")),
-	 * ">", "<") .strip(); if (letter.equalsIgnoreCase("A") ||
-	 * letter.equalsIgnoreCase("C") || letter.equalsIgnoreCase("G") ||
-	 * letter.equalsIgnoreCase("U")) { letters.add(new Tuple5<>(letter, null, new
-	 * Rectangle2D.Float(x, y, metrics.stringWidth(letter), fontSize), font, null));
-	 * // letters.add(new Tuple5<>(letter, new Vector2(x, y), new
-	 * Rectangle2D.Float(x, y, metrics.stringWidth(letter), fontSize), font, null));
-	 * } } else if (line.contains("text")) { String[] split =
-	 * this.boundedSubstring(line, "matrix(", ")").split("\\s+"); float x =
-	 * Float.parseFloat(split[4]), y = Float.parseFloat(split[5]) - fontSize; String
-	 * letter = this.boundedSubstring(line, ">", "<").strip(); if
-	 * (letter.equalsIgnoreCase("A") || letter.equalsIgnoreCase("C") ||
-	 * letter.equalsIgnoreCase("G") || letter.equalsIgnoreCase("U")) {
-	 * letters.add(new Tuple5<>(letter, null, new Rectangle2D.Float(x, y,
-	 * metrics.stringWidth(letter), fontSize), font, null)); // letters.add(new
-	 * Tuple5<>(letter, new Vector2(x, y), new Rectangle2D.Float(x, y,
-	 * metrics.stringWidth(letter), fontSize), font, null)); } } } float dx = 0f, dy
-	 * = 0f; for (Tuple5<String, Vector2, Rectangle2D.Float, Font, Float> letter :
-	 * letters) { dx += letter.t2.width; dy -= letter.t2.height; } dx = dx * 1.2f /
-	 * (letters.size() * 2f); dy /= (letters.size() * 2f);
-	 * 
-	 * for (Line2D.Float line : labelLines) { line.x1 += dx; line.x2 += dx; line.y1
-	 * += dy; line.y2 += dy; }
-	 * 
-	 * for (Tuple5<String, Vector2, Rectangle2D.Float, Font, Float> label : labels)
-	 * { label.t1.x += label.t2.width / 6f; label.t2.x += label.t2.width / 6f; } }
-	 * else { for (String line : styleLines) { int dotIndex = line.indexOf("."),
-	 * openBracketIndex = line.indexOf("{"); String styleName =
-	 * line.substring(dotIndex + 1, openBracketIndex); HashMap<String, Object>
-	 * styleData = new HashMap<>(); for (String styleDatum :
-	 * line.substring(openBracketIndex + 1, line.indexOf("}")).split(";")) { int
-	 * colonIndex = styleDatum.indexOf(":"); String datumLabel =
-	 * styleDatum.substring(0, colonIndex), datumContent =
-	 * styleDatum.substring(colonIndex + 1); Object datum = null; switch
-	 * (datumLabel) { case "fill": case "stroke": datum =
-	 * datumContent.trim().equalsIgnoreCase("none") ? new Color(0f, 0f, 0f, 1f) :
-	 * new Color(Integer.parseInt(datumContent.substring(1), 16), true); break; case
-	 * "font-family": datum = datumContent.trim().replace("'", ""); break; case
-	 * "font-size": case "stroke-width": datum =
-	 * Float.parseFloat(datumContent.replace("px", "").replaceAll("\\s+", ""));
-	 * break; } styleData.put(datumLabel, datum); } styleDataMap.put(styleName,
-	 * styleData); } boolean formatRequiresXYShift = false; do { String
-	 * lineToLowerCase = _line.toLowerCase(); if
-	 * (lineToLowerCase.contains(nucleotideLinePrefix)) { this.parseLines(reader,
-	 * nucleotideLines); } else if (lineToLowerCase.contains(labelLinePrefix)) {
-	 * this.parseLines(reader, labelLines); } else if
-	 * (lineToLowerCase.contains(sequenceLinePrefix)) { this.parseText(reader,
-	 * letters); formatRequiresXYShift = true; } else if
-	 * (lineToLowerCase.contains(lettersLinePrefix)) { this.parseText(reader,
-	 * letters); } else if (lineToLowerCase.contains(helixLinePrefix)) {
-	 * this.parseText(reader, helixLabels); } else if
-	 * (lineToLowerCase.contains(labelsLinePrefix)) { this.parseText(reader,
-	 * labels); } _line = reader.readLine(); } while (_line != null);
-	 * 
-	 * if (formatRequiresXYShift) { float dy = 0f; for (Tuple5<String, Vector2,
-	 * Rectangle2D.Float, Font, Float> letter : letters) { dy -= letter.t2.height; }
-	 * dy /= (letters.size() * 6f);
-	 * 
-	 * for (Line2D.Float line : labelLines) { line.y1 += dy; line.y2 += dy; } } } //
-	 * for (int index = 0; index < labels.size(); index++) { // Tuple4<String,
-	 * Rectangle2D.Float, Font, Float> // label = labels.get(index); // label.t1 =
-	 * this.modifyLabelBounds(label.t1); // } // for (int index = 0; index <
-	 * letters.size(); index++) { // Tuple4<String, Rectangle2D.Float, Font, Float>
-	 * // letter = letters.get(index); // letter.t1 =
-	 * this.modifyLetterBounds(letter.t1); // } for (Line2D.Float line : labelLines)
-	 * { Tuple5<String, Vector2, Rectangle2D.Float, Font, Float> label =
-	 * this.findPairLabel(line); if (label != null) { // Label Content | BoundingBox
-	 * | Font info | Stroke Width | Nuc ID Vector2 v1 = new Vector2(line.x1,
-	 * line.y1); // if (Vector2.dot(Vector2.subtract(new Vector2(line.x2, line.y2),
-	 * v1), Vector2.subtract(new Vector2((float)label.t1.getCenterX(),
-	 * (float)label.t1.getCenterY()), v1)) < 0) { // line = new
-	 * Line2D.Float(line.getP2(), line.getP1()); // } Tuple6<String, Vector2,
-	 * Rectangle2D.Float, Font, Float, Integer> letter = this .findPairLetter(line);
-	 * if (letter != null) { pairsData.add(new Tuple3<>(label, letter, line)); } } }
-	 * String documentName = "Unknown"; writer.println("<ComplexDocument Name='" +
-	 * documentName + "'>");
-	 * writer.println("<SceneNodeGeom CenterX='0.0' CenterY='0.0' Scale='2.0' />");
-	 * writer.println("<Complex Name='" + documentName + "'>");
-	 * writer.println("<RNAMolecule Name='" + documentName + "'>");
-	 * writer.println("<NucListData StartNucID='1' DataType='NucChar.XPos.YPos'>");
-	 * 
-	 * float minX = Float.MAX_VALUE, maxX = Float.MIN_VALUE, minY = Float.MAX_VALUE,
-	 * maxY = Float.MIN_VALUE; for (Tuple5<String, Vector2, Rectangle2D.Float, Font,
-	 * Float> letter : letters) { float x = letter.t2.x, y = letter.t2.y; if (x <
-	 * minX) { minX = x; } else if (x > maxX) { maxX = x; } if (y < minY) { minY =
-	 * y; } else if (y > maxY) { maxY = y; } } Vector2 mid = new Vector2((minX +
-	 * maxX) / 2f, (minY + maxY) / 2f); for (Tuple5<String, Vector2,
-	 * Rectangle2D.Float, Font, Float> letter : letters) { Vector2 letterLocation =
-	 * Vector2.subtract(new Vector2(letter.t2.x, letter.t2.y), mid);
-	 * letterLocation.y = -letterLocation.y; writer.println(letter.t0 + " " +
-	 * StringUtil.roundStrVal(letterLocation.x, 4) + " " +
-	 * StringUtil.roundStrVal(letterLocation.y, 4)); }
-	 * 
-	 * writer.println("</NucListData>"); String lineStarter = "<Nuc RefIDs='1-" +
-	 * letters.size() + "'"; writer.println(lineStarter +
-	 * " Color='ff0000' FontID='0' FontSize='" + 4 + "'/>");
-	 * writer.println(lineStarter +
-	 * " IsSchematic='false' SchematicColor='0' SchematicLineWidth='1.5' SchematicBPLineWidth='1.0' SchematicBPGap='2.0' SchematicFPGap='2.0' SchematicTPGap='2.0' IsNucPath='false' NucPathColor='ff0000' NucPathLineWidth='0.0' />"
-	 * ); for (Tuple3<Tuple5<String, Vector2, Rectangle2D.Float, Font, Float>,
-	 * Tuple6<String, Vector2, Rectangle2D.Float, Font, Float, Integer>,
-	 * Line2D.Float> pair : pairsData) { double strokeWidth = pair.t0.t4 == null ?
-	 * pair.t1.t4 == null ? 0.2f : pair.t1.t4 : pair.t0.t4;
-	 * writer.println("<Nuc RefID='" + pair.t1.t5 + "'>");
-	 * writer.println("<LabelList>"); double centerX = pair.t1.t2.getCenterX(),
-	 * centerY = pair.t1.t2.getCenterY(), dx = (pair.t2.x1 - centerX), dy =
-	 * -(pair.t2.y1 - centerY); writer.println("l " + StringUtil.roundStrVal(dx, 4)
-	 * + " " + StringUtil.roundStrVal(dy, 4) + " " +
-	 * StringUtil.roundStrVal(pair.t2.x2 - centerX, 4) + " " +
-	 * StringUtil.roundStrVal(-(pair.t2.y2 - centerY), 4) + " " +
-	 * StringUtil.roundStrVal(strokeWidth, 4) + " " + 255 + " 0.0 0 0 0 0");
-	 * writer.println("s " + StringUtil.roundStrVal(pair.t0.t2.getCenterX() -
-	 * pair.t1.t2.getCenterX(), 4) + " " +
-	 * StringUtil.roundStrVal(pair.t1.t2.getCenterY() - pair.t0.t2.getCenterY(), 4)
-	 * + " 0.0 " + pair.t0.t3.getSize() + " 0 " + 255 + " \"" + pair.t0.t0 + "\"");
-	 * writer.println("</LabelList>"); writer.println("</Nuc>"); }
-	 * 
-	 * float minimumDistance = Float.MAX_VALUE, maximumDistance = 0f; for
-	 * (Line2D.Float nucleotideLine : nucleotideLines) { float distance =
-	 * this.distance(nucleotideLine); if (distance < minimumDistance) {
-	 * minimumDistance = distance; } else if (distance > maximumDistance) {
-	 * maximumDistance = distance; } } double logMaximumDistance =
-	 * Math.log(maximumDistance), logMinimumDistance = Math.log(minimumDistance),
-	 * interpolatedDistance = (Math .exp(logMinimumDistance + (logMaximumDistance -
-	 * logMinimumDistance) * 0.75f)); for (Line2D.Float nucleotideLine :
-	 * nucleotideLines) { float distanceScalar = (float) interpolatedDistance /
-	 * (this.distance(nucleotideLine) * 2f); nucleotideLine =
-	 * this.scaledLine(nucleotideLine, distanceScalar, distanceScalar);
-	 * 
-	 * Tuple6<String, Vector2, Rectangle2D.Float, Font, Float, Integer> letter0 =
-	 * this .findClosestLetter(this.scaledLine(nucleotideLine, 0f,
-	 * lineExtensionScalar)), letter1 =
-	 * this.findClosestLetter(this.scaledLine(nucleotideLine, lineExtensionScalar,
-	 * 0f)); if (letter0.t5.intValue() != letter1.t5.intValue()) { writer.println(
-	 * "<BasePairs nucID='" + letter0.t5 + "' length='1' bpNucID='" + letter1.t5 +
-	 * "' />"); } else { debugLines.add( new
-	 * Tuple2<>(this.scaledLine(nucleotideLine, 0f, lineExtensionScalar),
-	 * Color.ORANGE)); debugLines.add( new Tuple2<>(this.scaledLine(nucleotideLine,
-	 * lineExtensionScalar, 0f), Color.MAGENTA)); // throw new
-	 * ArithmeticException("Geometry mistake; nucleotide algorithmically found to be bound to itself."
-	 * ); } }
-	 * 
-	 * writer.println("</RNAMolecule>"); writer.println("</Complex>");
-	 * writer.println("</ComplexDocument>"); writer.close();
-	 * setCurrentInputFile(temporaryXrna); parseXrna(); } JFrame frame = new
-	 * JFrame(); Dimension screenSize =
-	 * java.awt.Toolkit.getDefaultToolkit().getScreenSize(); Vector2 mouse = new
-	 * Vector2(), origin = new Vector2(); JPanel panel = new JPanel() {
-	 * 
-	 * @Override public void paintComponent(Graphics g) { super.paintComponent(g);
-	 * Graphics2D g2D = (Graphics2D) g; g2D.scale(scale, scale);
-	 * g2D.translate(origin.x, origin.y); g.setColor(Color.RED); g2D.setStroke(new
-	 * BasicStroke(0.2f)); for (Tuple5<String, Vector2, Rectangle2D.Float, Font,
-	 * Float> label : labels) { if (label.t3 != null) { g2D.setStroke(new
-	 * BasicStroke(label.t4)); } // g2D.setColor(Color.RED); //
-	 * g2D.draw(modify(label.t1)); g2D.setColor(Color.WHITE); g2D.setFont(label.t3);
-	 * g2D.drawString(label.t0, label.t1.x, label.t1.y + label.t2.height); }
-	 * 
-	 * for (Tuple5<String, Vector2, Rectangle2D.Float, Font, Float> letter :
-	 * letters) { if (letter.t3 != null) { g2D.setStroke(new
-	 * BasicStroke(letter.t4)); } g2D.setColor(Color.YELLOW);
-	 * g2D.setFont(letter.t3); g2D.drawString(letter.t0, letter.t1.x, letter.t1.y +
-	 * letter.t2.height); }
-	 * 
-	 * for (Tuple5<String, Vector2, Rectangle2D.Float, Font, Float> helixLabel :
-	 * helixLabels) { if (helixLabel.t3 != null) { g2D.setStroke(new
-	 * BasicStroke(helixLabel.t4)); } g2D.setColor(Color.RED);
-	 * g2D.draw(helixLabel.t2); g2D.setColor(Color.WHITE);
-	 * g2D.setFont(helixLabel.t3); g2D.drawString(helixLabel.t0, helixLabel.t1.x,
-	 * helixLabel.t1.y + helixLabel.t2.height); }
-	 * 
-	 * g2D.setColor(Color.MAGENTA); for (Line2D.Float line : nucleotideLines) {
-	 * g2D.draw(line); }
-	 * 
-	 * g2D.setColor(Color.GREEN); for (Line2D.Float line : labelLines) {
-	 * g2D.draw(line); }
-	 * 
-	 * for (Tuple2<Line2D.Float, Color> line : debugLines) { g2D.setColor(line.t1);
-	 * g2D.draw(line.t0); }
-	 * 
-	 * Random random = new Random(0); for (Tuple3<Tuple5<String, Vector2,
-	 * Rectangle2D.Float, Font, Float>, Tuple6<String, Vector2, Rectangle2D.Float,
-	 * Font, Float, Integer>, Line2D.Float> pairDatum : pairsData) {
-	 * g2D.setColor(new Color(100 + random.nextInt(155), 100 + random.nextInt(155),
-	 * 100 + random.nextInt(155))); if (pairDatum.t0.t3 != null) { g2D.setStroke(new
-	 * BasicStroke(pairDatum.t0.t4)); }
-	 * g2D.draw(modifyLabelBounds(pairDatum.t0.t2));
-	 * 
-	 * if (pairDatum.t1.t3 != null) { g2D.setStroke(new
-	 * BasicStroke(pairDatum.t0.t4)); } Rectangle2D.Float modifiedT1 =
-	 * modifyLetterBounds(pairDatum.t1.t2); float maximumAxis =
-	 * Math.max(modifiedT1.width, modifiedT1.height); g2D.draw(new
-	 * Ellipse2D.Float(modifiedT1.x, modifiedT1.y, maximumAxis, maximumAxis)); } }
-	 * }; panel.setBackground(Color.BLACK); frame.addKeyListener(new KeyAdapter() {
-	 * 
-	 * @Override public void keyPressed(KeyEvent event) { switch
-	 * (event.getKeyCode()) { case KeyEvent.VK_ESCAPE: System.exit(0); break; } }
-	 * }); frame.addMouseWheelListener(e -> {
-	 * mouseWheelMoved(-e.getPreciseWheelRotation()); frame.repaint(); });
-	 * frame.addMouseListener(new MouseAdapter() {
-	 * 
-	 * @Override public void mousePressed(MouseEvent event) { Point2D p2D =
-	 * event.getLocationOnScreen(); mouse.x = (float) p2D.getX(); mouse.y = (float)
-	 * p2D.getY(); } }); frame.addMouseMotionListener(new MouseMotionAdapter() {
-	 * 
-	 * @Override public void mouseDragged(MouseEvent event) { Point2D p2D =
-	 * event.getLocationOnScreen(); origin.x += (p2D.getX() - mouse.x) / scale;
-	 * origin.y += (p2D.getY() - mouse.y) / scale; mouse.x = (float) p2D.getX();
-	 * mouse.y = (float) p2D.getY(); frame.repaint(); } }); frame.add(panel);
-	 * frame.setSize(screenSize); frame.setUndecorated(true);
-	 * frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); //
-	 * frame.setVisible(true); }
-	 * 
-	 * private float distance(Line2D.Float line) { return (float)
-	 * line.getP1().distance(line.getP2()); }
-	 * 
-	 * private Tuple5<String, Vector2, Rectangle2D.Float, Font, Float>
-	 * findPairLabel(Line2D.Float line) { // Attempt to find a direct, full
-	 * collision between the line and the bounds for (Tuple5<String, Vector2,
-	 * Rectangle2D.Float, Font, Float> label : labels) { Rectangle2D.Float t2 =
-	 * label.t2; float x0 = t2.x, y0 = t2.y, x1 = t2.x + t2.width, y1 = t2.y +
-	 * t2.height; Line2D.Float edge0 = new Line2D.Float(x0, y0, x1, y0), edge1 = new
-	 * Line2D.Float(x1, y0, x1, y1), edge2 = new Line2D.Float(x1, y1, x0, y1), edge3
-	 * = new Line2D.Float(x0, y1, x0, y0); if (line.intersectsLine(edge0) ||
-	 * line.intersectsLine(edge1) || line.intersectsLine(edge2) ||
-	 * line.intersectsLine(edge3)) { return label; } } // Attempt to find a direct,
-	 * full collision between the scaled-up line and the // bounds for
-	 * (Tuple5<String, Vector2, Rectangle2D.Float, Font, Float> label : labels) {
-	 * Rectangle2D.Float t2 = label.t2; float x0 = t2.x, y0 = t2.y, x1 = t2.x +
-	 * t2.width, y1 = t2.y + t2.height; Line2D.Float scaledLine =
-	 * this.scaledLine(line, lineExtensionScalar, lineExtensionScalar), edge0 = new
-	 * Line2D.Float(x0, y0, x1, y0), edge1 = new Line2D.Float(x1, y0, x1, y1), edge2
-	 * = new Line2D.Float(x1, y1, x0, y1), edge3 = new Line2D.Float(x0, y1, x0, y0);
-	 * if (scaledLine.intersectsLine(edge0) || scaledLine.intersectsLine(edge1) ||
-	 * scaledLine.intersectsLine(edge2) || scaledLine.intersectsLine(edge3)) {
-	 * return label; } } // Attempt to find the bounds with the nearest vertex to
-	 * the line; nearest // vertex must be within a maximum-distance threshold.
-	 * double minimumDistanceSquared = Double.MAX_VALUE; Tuple5<String, Vector2,
-	 * Rectangle2D.Float, Font, Float> minimumDistanceLabel = null; for
-	 * (Tuple5<String, Vector2, Rectangle2D.Float, Font, Float> label : labels) {
-	 * Rectangle2D.Float t2 = label.t2; float x0 = t2.x, y0 = t2.y, x1 = t2.x +
-	 * t2.width, y1 = t2.y + t2.height; double currentMinimumDistanceSquared =
-	 * Math.min(Math .min(Math.min(line.ptSegDistSq(x0, y0), line.ptSegDistSq(x1,
-	 * y0)), line.ptSegDistSq(x1, y1)), line.ptSegDistSq(x0, y1)); if
-	 * (currentMinimumDistanceSquared < minimumDistanceSquared) {
-	 * minimumDistanceSquared = currentMinimumDistanceSquared; minimumDistanceLabel
-	 * = label; } } return minimumDistanceSquared / new Point2D.Float(line.x1,
-	 * line.y1).distanceSq(new Point2D.Float(line.x2, line.y2)) < 15f ?
-	 * minimumDistanceLabel : null; }
-	 * 
-	 * private Tuple6<String, Vector2, Rectangle2D.Float, Font, Float, Integer>
-	 * findPairLetter(Line2D.Float line) { for (int index = 0; index <
-	 * letters.size(); index++) { Tuple5<String, Vector2, Rectangle2D.Float, Font,
-	 * Float> letter = letters.get(index); float maximumRadius =
-	 * Math.max(letter.t2.width, letter.t2.height) / 2f; Rectangle2D.Float
-	 * modifiedT2 = letter.t2; if (line.ptSegDist(modifiedT2.getCenterX(),
-	 * modifiedT2.getCenterY()) <= maximumRadius) { return new Tuple6<>(letter.t0,
-	 * letter.t1, letter.t2, letter.t3, letter.t4, index + 1); } } return
-	 * findClosestLetter(this.scaledLine(line, lineExtensionScalar,
-	 * lineExtensionScalar)); }
-	 * 
-	 * private Tuple6<String, Vector2, Rectangle2D.Float, Font, Float, Integer>
-	 * findMostDirectLetter( Line2D.Float line) { Vector2 v1 = new Vector2(line.x1,
-	 * line.y1), v2 = new Vector2(line.x2, line.y2), normalizedLineDv =
-	 * Vector2.normalize(Vector2.subtract(v2, v1)), centerV1V2 =
-	 * Vector2.scaleDown(Vector2.add(v1, v2), 2f); Tuple5<String, Vector2,
-	 * Rectangle2D.Float, Font, Float> mostDirectLetter = null; int mostDirectIndex
-	 * = -1; float mostDirectDotProduct = -1f; for (int index = 0; index <
-	 * letters.size(); index++) { Tuple5<String, Vector2, Rectangle2D.Float, Font,
-	 * Float> letter = letters.get(index); Vector2 normalizedDv =
-	 * Vector2.normalize(Vector2.subtract( new Vector2((float)
-	 * letter.t2.getCenterX(), (float) letter.t2.getCenterY()), centerV1V2)); float
-	 * dotProduct = Vector2.dot(normalizedLineDv, normalizedDv); if (dotProduct >
-	 * mostDirectDotProduct) { mostDirectLetter = letter; mostDirectIndex = index;
-	 * mostDirectDotProduct = dotProduct; } } return mostDirectLetter == null ? null
-	 * : new Tuple6<String, Vector2, Rectangle2D.Float, Font, Float,
-	 * Integer>(mostDirectLetter.t0, mostDirectLetter.t1, mostDirectLetter.t2,
-	 * mostDirectLetter.t3, mostDirectLetter.t4, mostDirectIndex); }
-	 * 
-	 * private Tuple6<String, Vector2, Rectangle2D.Float, Font, Float, Integer>
-	 * findClosestLetter(Line2D.Float line) { Tuple6<String, Vector2,
-	 * Rectangle2D.Float, Font, Float, Integer> closestPairLetter = null; double
-	 * closestDistance = Double.MAX_VALUE; for (int index = 0; index <
-	 * letters.size(); index++) { Tuple5<String, Vector2, Rectangle2D.Float, Font,
-	 * Float> letter = letters.get(index); Rectangle2D.Float t2 = letter.t2; double
-	 * newDistance = line.ptSegDist(t2.getCenterX(), t2.getCenterY()); if
-	 * (newDistance < closestDistance) { closestDistance = newDistance;
-	 * closestPairLetter = new Tuple6<String, Vector2, Rectangle2D.Float, Font,
-	 * Float, Integer>(letter.t0, letter.t1, letter.t2, letter.t3, letter.t4, index
-	 * + 1); } } return closestPairLetter; }
-	 * 
-	 * private Rectangle2D.Float modifyLabelBounds(Rectangle2D.Float rect) { return
-	 * new Rectangle2D.Float(rect.x - rect.width / 20f * 1.25f, rect.y + rect.height
-	 * / 10f, rect.width, rect.height); }
-	 * 
-	 * private Rectangle2D.Float modifyLetterBounds(Rectangle2D.Float rect) { float
-	 * maximumDimension = Math.max(rect.width, rect.height); return new
-	 * Rectangle2D.Float(rect.x - maximumDimension * 0.15f, rect.y +
-	 * maximumDimension * 0.125f, rect.width, rect.height); }
-	 * 
-	 * private Line2D.Float scaledLine(Line2D.Float line, float scalar0, float
-	 * scalar1) { float lineX1 = line.x1, lineY1 = line.y1, lineX2 = line.x2, lineY2
-	 * = line.y2, xHalf = (lineX1 + lineX2) / 2f, yHalf = (lineY1 + lineY2) / 2f;
-	 * return new Line2D.Float(xHalf + (lineX1 - xHalf) * scalar0, yHalf + (lineY1 -
-	 * yHalf) * scalar0, xHalf + (lineX2 - xHalf) * scalar1, yHalf + (lineY2 -
-	 * yHalf) * scalar1); }
-	 * 
-	 * private void mouseWheelMoved(double deltaWheel) { this.scale *= (float)
-	 * Math.pow(deltaScalar, deltaWheel); if (this.scale < this.minimumScale) {
-	 * this.scale = this.minimumScale; } else if (this.scale > this.maximumScale) {
-	 * this.scale = this.maximumScale; } }
-	 * 
-	 * private void parseLines(BufferedReader reader, ArrayList<Line2D.Float>
-	 * endPoints) throws IOException { for (String line = reader.readLine(); line !=
-	 * null && !line.contains("</g>"); line = reader.readLine()) { line =
-	 * line.replaceAll("\\s+", ""); try { endPoints.add(new
-	 * Line2D.Float(Float.parseFloat(this.boundedSubstring(line, "x1=\"", "\"")),
-	 * Float.parseFloat(this.boundedSubstring(line, "y1=\"", "\"")),
-	 * Float.parseFloat(this.boundedSubstring(line, "x2=\"", "\"")),
-	 * Float.parseFloat(this.boundedSubstring(line, "y2=\"", "\"")))); } catch
-	 * (StringIndexOutOfBoundsException ex) { throw ex; } } }
-	 * 
-	 * private void parseText(BufferedReader reader, ArrayList<Tuple5<String,
-	 * Vector2, Rectangle2D.Float, Font, Float>> labels) throws IOException { for
-	 * (String line = reader.readLine(); line != null && !line.contains("</g>");
-	 * line = reader.readLine()) { String[] matrixEntries =
-	 * this.boundedSubstring(line, "matrix(", ")").split("\\s+"); Vector2 position =
-	 * new Vector2(Float.parseFloat(matrixEntries[4]),
-	 * Float.parseFloat(matrixEntries[5])); String text =
-	 * this.boundedSubstring(line, ">", "<"); HashMap<String, Object> classAggregate
-	 * = new HashMap<String, Object>(); for (String _class :
-	 * this.boundedSubstring(line, "class=\"", "\"").split(" ")) { HashMap<String,
-	 * Object> classData = styleDataMap.get(_class); try { for (Map.Entry<String,
-	 * Object> classDatum : classData.entrySet()) {
-	 * classAggregate.put(classDatum.getKey(), classDatum.getValue()); } } catch
-	 * (NullPointerException ex) { int index = 0; for (String key :
-	 * styleDataMap.keySet()) { System.out.println("key " + index + ": " + key);
-	 * index++; } System.out.println("_class: " + _class); throw ex; } } float
-	 * fontSize = (float) classAggregate.get("font-size"); position.y -= fontSize;
-	 * Font font = new Font((String) classAggregate.get("font-family"), Font.PLAIN,
-	 * (int) fontSize); FontMetrics metrics =
-	 * ComplexParentFrame.frame.getFontMetrics(font); labels.add(new Tuple5<String,
-	 * Vector2, Rectangle2D.Float, Font, Float>(text, null, new
-	 * Rectangle2D.Float(position.x, position.y, metrics.stringWidth(text),
-	 * fontSize), font, (Float) classAggregate.get("stroke-width"))); //
-	 * labels.add(new Tuple5<String, Vector2, Rectangle2D.Float, Font, Float>(text,
-	 * new Vector2(position.x, position.y), new Rectangle2D.Float(position.x,
-	 * position.y, metrics.stringWidth(text), fontSize), font,
-	 * (Float)classAggregate.get("stroke-width"))); } }
-	 * 
-	 * private String boundedSubstring(String string, String query, String suffix) {
-	 * int queryIndexPlusQueryLength = string.indexOf(query) + query.length(); try {
-	 * return string.substring(queryIndexPlusQueryLength, string.indexOf(suffix,
-	 * queryIndexPlusQueryLength)); } catch (StringIndexOutOfBoundsException ex) {
-	 * System.out.println(string + "\t" + query + "\t" + suffix); throw ex; } }
-	 * 
-	 * private class Tuple2<T0, T1> { private T0 t0; private T1 t1;
-	 * 
-	 * private Tuple2(T0 t0, T1 t1) { this.t0 = t0; this.t1 = t1; } }
-	 * 
-	 * private class Tuple3<T0, T1, T2> { private T0 t0; private T1 t1; private T2
-	 * t2;
-	 * 
-	 * private Tuple3(T0 t0, T1 t1, T2 t2) { this.t0 = t0; this.t1 = t1; this.t2 =
-	 * t2; } }
-	 * 
-	 * private class Tuple4<T0, T1, T2, T3> { private T0 t0; private T1 t1; private
-	 * T2 t2; private T3 t3;
-	 * 
-	 * private Tuple4(T0 t0, T1 t1, T2 t2, T3 t3) { this.t0 = t0; this.t1 = t1;
-	 * this.t2 = t2; this.t3 = t3; } }
-	 * 
-	 * private class Tuple5<T0, T1, T2, T3, T4> { private T0 t0; private T1 t1;
-	 * private T2 t2; private T3 t3; private T4 t4;
-	 * 
-	 * private Tuple5(T0 t0, T1 t1, T2 t2, T3 t3, T4 t4) { this.t0 = t0; this.t1 =
-	 * t1; this.t2 = t2; this.t3 = t3; this.t4 = t4; } }
-	 * 
-	 * private class Tuple6<T0, T1, T2, T3, T4, T5> { private T0 t0; private T1 t1;
-	 * private T2 t2; private T3 t3; private T4 t4; private T5 t5;
-	 * 
-	 * private Tuple6(T0 t0, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) { this.t0 = t0;
-	 * this.t1 = t1; this.t2 = t2; this.t3 = t3; this.t4 = t4; this.t5 = t5; } } }
-	 */
 
 	private void parseXrna() throws Exception {
 		if (this.getCurrentInputFile().exists() && !this.getCurrentInputFile().canWrite()) {
