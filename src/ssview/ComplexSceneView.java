@@ -2063,15 +2063,16 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 						font = null;
 					float
 						fontSize = 4.0f;
-					final
-						Iterator<String> iterator = lines.iterator();
-					if (iterator.hasNext()) {
+					for (String line : lines) {
 						String
-							line = iterator.next(),
 							fontFamily = "Helvetica";
-						if (line.contains("style")) {
-							fontSize = Float.parseFloat(this.boundedSubstring(line, "font-size:", "px").trim());
-							fontFamily = this.boundedSubstring(line, "font-family", ";").trim();
+						if (line.contains("style=") || line.contains("style =")) {
+							if (line.contains("font-size:")) {								
+								fontSize = Float.parseFloat(this.boundedSubstring(line, "font-size:", "px").trim());
+							}
+							if (line.contains("font-family")) {
+								fontFamily = this.boundedSubstring(line, "font-family", ";").trim();
+							}
 						}
 						font = new Font(fontFamily, 0, Math.round(fontSize));
 						metrics = ComplexParentFrame.frame.getFontMetrics(font);
@@ -2100,7 +2101,8 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 							float
 								width = (float) metrics.stringWidth(label);
 							this.labels.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(label, new Rectangle2D.Float(x - width / 2.0f, y - fontSize, width, fontSize), font, null));
-						} else if (line.contains("title")) {
+						} /*else if (line.contains("title")) {
+							System.out.println("line: " + line);
 							float
 								x = Float.parseFloat(this.boundedSubstring(line, "x=\"", "\"")),
 								y = Float.parseFloat(this.boundedSubstring(line, "y=\"", "\""));
@@ -2109,26 +2111,34 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 							if (letter.equalsIgnoreCase("A") || letter.equalsIgnoreCase("C") || letter.equalsIgnoreCase("G") || letter.equalsIgnoreCase("U")) {
 								this.letters.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(letter, new Rectangle2D.Float(x, y - fontSize, (float) metrics.stringWidth(letter), fontSize), font, null));
 							}
-						} else if (line.contains("text")) {
-							String[]
-								split = this.boundedSubstring(line, "matrix(", ")").split("\\s+");
+						}*/ else if (line.contains("text")) {
 							float
-								x = Float.parseFloat(split[4]),
-								y = Float.parseFloat(split[5]);
-							String
-								letter2 = this.boundedSubstring(line, ">", "<").strip();
-							if (!letter2.equalsIgnoreCase("A") && !letter2.equalsIgnoreCase("C") && !letter2.equalsIgnoreCase("G") && !letter2.equalsIgnoreCase("U")) {
-								continue;
+								x,
+								y;
+							if (line.contains("matrix(")) {
+								String[]
+									split = this.boundedSubstring(line, "matrix(", ")").split("\\s+");
+								x = Float.parseFloat(split[4]);
+								y = Float.parseFloat(split[5]);								
+							} else {
+								x = Float.parseFloat(this.boundedSubstring(line, "x=\"", "\""));
+								y = Float.parseFloat(this.boundedSubstring(line, "y=\"", "\""));
 							}
-							this.letters.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(letter2, new Rectangle2D.Float(x, y - fontSize, (float) metrics.stringWidth(letter2), fontSize), font, null));
+							String
+								letter = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<").strip();//letter = this.boundedSubstring(line, ">", "<").strip();
+							if (letter.equalsIgnoreCase("A") || letter.equalsIgnoreCase("C") || letter.equalsIgnoreCase("G") | letter.equalsIgnoreCase("U")) {
+								this.letters.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(letter, new Rectangle2D.Float(x, y - fontSize, (float) metrics.stringWidth(letter), fontSize), font, null));
+							} else {
+//								System.out.println(line);
+							}
 						}
 					}
 					float
 						dx = 0.0f,
 						dy = 0.0f;
-					for (Tuple4<String, Rectangle2D.Float, Font, Float> letter3 : this.letters) {
-						dx += letter3.t1.width;
-						dy -= letter3.t1.height;
+					for (Tuple4<String, Rectangle2D.Float, Font, Float> letter : this.letters) {
+						dx += letter.t1.width;
+						dy -= letter.t1.height;
 					}
 					dx = dx * 1.2f / (this.letters.size() * 2.0f);
 					dy /= this.letters.size() * 2.0f;
@@ -2212,8 +2222,8 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					if (formatRequiresXYShift) {
 						float
 							dy = 0.0f;
-						for (Tuple4<String, Rectangle2D.Float, Font, Float> letter4 : this.letters) {
-							dy -= letter4.t1.height;
+						for (Tuple4<String, Rectangle2D.Float, Font, Float> letter : this.letters) {
+							dy -= letter.t1.height;
 						}
 						dy /= this.letters.size() * 6.0f;
 						for (Line2D.Float labelLine : this.labelLines) {
@@ -2354,10 +2364,10 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					maxX = Float.MIN_VALUE,
 					minY = Float.MAX_VALUE,
 					maxY = Float.MIN_VALUE;
-				for (Tuple4<String, Rectangle2D.Float, Font, Float> letter3 : this.letters) {
+				for (Tuple4<String, Rectangle2D.Float, Font, Float> letter : this.letters) {
 					float
-						x = letter3.t1.x,
-						y = letter3.t1.y;
+						x = letter.t1.x,
+						y = letter.t1.y;
 					if (x < minX) {
 						minX = x;
 					} else if (x > maxX) {
@@ -2371,21 +2381,17 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 				}
 				Vector2
 					mid = new Vector2((minX + maxX) / 2.0f, (minY + maxY) / 2.0f);
-				for (Tuple4<String, Rectangle2D.Float, Font, Float> letter6 : this.letters) {
+				for (Tuple4<String, Rectangle2D.Float, Font, Float> letter : this.letters) {
 					Vector2
-						letterLocation = Vector2.subtract(new Vector2(letter6.t1.x, letter6.t1.y), mid);
+						letterLocation = Vector2.subtract(new Vector2(letter.t1.x, letter.t1.y), mid);
 					letterLocation.y = -letterLocation.y;
-					writer.println(String.valueOf(letter6.t0) + " " + letterLocation.x + " " + letterLocation.y);
+					writer.println(String.valueOf(letter.t0) + " " + letterLocation.x + " " + letterLocation.y);
 				}
 				writer.println("</NucListData>");
 				String
 					lineStarter = "<Nuc RefIDs='1-" + this.letters.size() + "'";
 				writer.println(String.valueOf(lineStarter) + " Color='ff0000' FontID='0' FontSize='" + 4 + "'/>");
 				writer.println(String.valueOf(lineStarter) + " IsSchematic='false' SchematicColor='0' SchematicLineWidth='1.5' SchematicBPLineWidth='1.0' SchematicBPGap='2.0' SchematicFPGap='2.0' SchematicTPGap='2.0' IsNucPath='false' NucPathColor='ff0000' NucPathLineWidth='0.0' />");
-				Tuple4<String, Rectangle2D.Float, Font, Float>
-					letter0 = this.letters.get(0);
-				Tuple5<String, Rectangle2D.Float, Font, Float, Integer>
-					augmentedLetter0 = new Tuple5<>(letter0.t0, letter0.t1, letter0.t2, letter0.t3, -1);
 				for (Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pair : this.pairsData) {
 					double
 						strokeWidth = (pair.t0.t3 == null) ? ((pair.t1.t3 == null) ? 0.2f : pair.t1.t3) : pair.t0.t3;
@@ -2426,18 +2432,25 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					logMaximumDistance = Math.log(maximumDistance),
 					logMinimumDistance = Math.log(minimumDistance),
 					interpolatedDistance = Math.exp(logMinimumDistance + (logMaximumDistance - logMinimumDistance) * 0.75);
-				for (Line2D.Float nucleotideLine2 : this.nucleotideLines) {
+				for (Line2D.Float nucleotideLine : this.nucleotideLines) {
 					float
-						distanceScalar = (float) interpolatedDistance / (this.distance(nucleotideLine2) * 2.0f);
-					nucleotideLine2 = this.scaledLine(nucleotideLine2, distanceScalar, distanceScalar);
+						distanceScalar = (float) interpolatedDistance / (this.distance(nucleotideLine) * 2.0f);
+					Line2D.Float
+						scaledLine = this.scaledLine(nucleotideLine, distanceScalar, distanceScalar);
 					Tuple5<String, Rectangle2D.Float, Font, Float, Integer>
-						letter7 = this.findClosestLetter(this.scaledLine(nucleotideLine2, 0.0f, this.lineExtensionScalar)),
-						letter8 = this.findClosestLetter(this.scaledLine(nucleotideLine2, this.lineExtensionScalar, 0.0f));
-					if (letter7.t4 != (int) letter8.t4) {
-						writer.println("<BasePairs nucID='" + (letter7.t4 + 1) + "' length='1' bpNucID='" + (letter8.t4 + 1) + "' />");
+						letter0 = this.findClosestLetter(this.scaledLine(nucleotideLine, 0.0f, this.lineExtensionScalar)),
+						letter1;
+					if (!Float.isNaN(nucleotideLine.x1) && !Float.isNaN(nucleotideLine.y1) && !Float.isNaN(nucleotideLine.x2) && Float.isNaN(nucleotideLine.y2)) {
+						nucleotideLine = scaledLine;
+						letter1 = this.findClosestLetter(this.scaledLine(nucleotideLine, this.lineExtensionScalar, 0.0f));
 					} else {
-						this.debugLines.add(new Tuple2<>(this.scaledLine(nucleotideLine2, 0.0f, this.lineExtensionScalar), Color.ORANGE));
-						this.debugLines.add(new Tuple2<>(this.scaledLine(nucleotideLine2, this.lineExtensionScalar, 0.0f), Color.MAGENTA));
+						letter1 = this.findSecondClosestLetter(this.scaledLine(nucleotideLine, this.lineExtensionScalar, 0.0f), letter0.t4);
+					}
+					if (letter0.t4 != (int)letter1.t4) {
+						writer.println("<BasePairs nucID='" + (letter0.t4 + 1) + "' length='1' bpNucID='" + (letter1.t4 + 1) + "' />");
+					} else {
+						this.debugLines.add(new Tuple2<>(this.scaledLine(nucleotideLine, 0.0f, this.lineExtensionScalar), Color.ORANGE));
+						this.debugLines.add(new Tuple2<>(this.scaledLine(nucleotideLine, this.lineExtensionScalar, 0.0f), Color.MAGENTA));
 					}
 				}
 				writer.println("</RNAMolecule>");
@@ -2651,10 +2664,32 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 				Rectangle2D.Float
 					t1 = this.modifyLetterBounds(letter.t1);
 				double
-					newDistance = line.ptSegDist(t1.getCenterX(), t1.getCenterY());
-				if (newDistance < closestDistance) {
-					closestDistance = newDistance;
+					newDistanceSq = line.ptSegDistSq(t1.getCenterX(), t1.getCenterY());
+				if (newDistanceSq < closestDistance) {
+					closestDistance = newDistanceSq;
 					closestPairLetter = new Tuple5<String, Rectangle2D.Float, Font, Float, Integer>(letter.t0, letter.t1, letter.t2, letter.t3, index);
+				}
+			}
+			return closestPairLetter;
+		}
+
+		private Tuple5<String, Rectangle2D.Float, Font, Float, Integer> findSecondClosestLetter(Line2D.Float line, int closestIndex) {
+			Tuple5<String, Rectangle2D.Float, Font, Float, Integer>
+				closestPairLetter = null;
+			double
+				closestDistance = Double.MAX_VALUE;
+			for (int index = 0; index < this.letters.size(); index++) {
+				if (index != closestIndex) {
+					Tuple4<String, Rectangle2D.Float, Font, Float>
+						letter = this.letters.get(index);
+					Rectangle2D.Float
+						t1 = this.modifyLetterBounds(letter.t1);
+					double
+						newDistanceSq = line.ptSegDistSq(t1.getCenterX(), t1.getCenterY());
+					if (newDistanceSq < closestDistance) {
+						closestDistance = newDistanceSq;
+						closestPairLetter = new Tuple5<String, Rectangle2D.Float, Font, Float, Integer>(letter.t0, letter.t1, letter.t2, letter.t3, index);
+					}	
 				}
 			}
 			return closestPairLetter;
