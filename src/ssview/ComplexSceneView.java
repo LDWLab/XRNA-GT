@@ -2020,9 +2020,34 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 
 		private SVGToXRNAParser() throws Exception {
 			File
-				temporaryXrna = File.createTempFile("temp", ".xrna");
-	        temporaryXrna.deleteOnExit();
-			try (BufferedReader reader = new BufferedReader(new FileReader(getCurrentInputFile())); PrintWriter writer = new PrintWriter(new FileWriter(temporaryXrna))) {
+				temporaryInput = new File(getCurrentInputFile().getParentFile() + "\\temporary_input.svg"),//File.createTempFile("temp_input", ".svg"),
+				temporaryXrna = new File(getCurrentInputFile().getParentFile() + "\\temp_.xrna");//File.createTempFile("temp", ".xrna");
+//			temporaryInput.deleteOnExit();
+//	        temporaryXrna.deleteOnExit();
+	        LinkedList<String>
+	        	inputLines = new LinkedList<>();
+	        try (BufferedReader reader = new BufferedReader(new FileReader(getCurrentInputFile()))) {
+	        	for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+	        		inputLines.add(line);
+	        	}
+	        }
+	        try (PrintWriter writer = new PrintWriter(new FileWriter(temporaryInput))) {
+	        	for (String inputLine : inputLines) {
+	        		inputLine = inputLine.replace("/>", "/>\n");
+	        		inputLine = inputLine.replace("</g>", "</g>\n");
+	        		inputLine = inputLine.replace("<g>", "<g>\n");
+	        		inputLine = inputLine.replace("</title>", "</title>\n");
+	        		inputLine = inputLine.replace("</text>", "</text>\n");
+	        		if (inputLine.endsWith("\n")) {
+	        			writer.print(inputLine);
+	        		} else {
+	        			writer.println(inputLine);
+	        		}
+	        	}
+	        } catch (Exception ex) {
+	        	ex.printStackTrace();
+	        }
+			try (BufferedReader reader = new BufferedReader(new FileReader(temporaryInput)); PrintWriter writer = new PrintWriter(new FileWriter(temporaryXrna))) {
 				boolean
 					nonstandardSVGFormat = true;
 				String
@@ -2037,6 +2062,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					lines = new ArrayList<String>(),
 					styleLines = new ArrayList<String>();
 				for (; _line != null; _line = reader.readLine()) {
+					System.out.println("_line: " + _line);
 					String
 						lineToLowerCase = _line.toLowerCase();
 					if (lineToLowerCase.contains("<style")) {
@@ -2054,8 +2080,10 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 							break;
 						}
 						lines.add(_line);
+						System.out.println("\t_line: " + _line);
 					}
 				}
+				System.out.println("nonstandardSVGFormat: " + nonstandardSVGFormat);
 				if (nonstandardSVGFormat) {
 					FontMetrics
 						metrics = null;
@@ -2077,6 +2105,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 						font = new Font(fontFamily, 0, Math.round(fontSize));
 						metrics = ComplexParentFrame.frame.getFontMetrics(font);
 					}
+					System.out.println("lines.size(): " + lines.size());
 					for (String line : lines) {
 						if (line.contains("class=\"numbering-line\"")) {
 							float
@@ -2151,6 +2180,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					for (Tuple4<String, Rectangle2D.Float, Font, Float> label : this.labels) {
 						label.t1.x += label.t1.width / 6.0f;
 					}
+					System.out.println("letters.size(): " + letters.size());
 				} else {
 					for (String line3 : styleLines) {
 						int
@@ -2246,7 +2276,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					}
 				}
 				if (pairsData.size() > 0) {
-					System.out.println(pairsData.get(0).t1.t4 + " " + pairsData.get(0).t0.t0 + "\n");
+//					System.out.println(pairsData.get(0).t1.t4 + " " + pairsData.get(0).t0.t0 + "\n");
 					HashMap<Integer, ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>>
 						offsetData = new HashMap<>();
 					for (Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pairsDatum : pairsData) {
@@ -2446,7 +2476,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					} else {
 						letter1 = this.findSecondClosestLetter(this.scaledLine(nucleotideLine, this.lineExtensionScalar, 0.0f), letter0.t4);
 					}
-					if (letter0.t4 != (int)letter1.t4) {
+					if (Math.abs(letter0.t4 - letter1.t4) > 1) {
 						writer.println("<BasePairs nucID='" + (letter0.t4 + 1) + "' length='1' bpNucID='" + (letter1.t4 + 1) + "' />");
 					} else {
 						this.debugLines.add(new Tuple2<>(this.scaledLine(nucleotideLine, 0.0f, this.lineExtensionScalar), Color.ORANGE));
@@ -2776,12 +2806,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		private String boundedSubstring(String string, String query, String suffix) {
 			int
 				queryIndexPlusQueryLength = string.indexOf(query) + query.length();
-			try {
-				return string.substring(queryIndexPlusQueryLength, string.indexOf(suffix, queryIndexPlusQueryLength));
-			} catch (StringIndexOutOfBoundsException ex) {
-				System.out.println(String.valueOf(string) + "\t" + query + "\t" + suffix);
-				throw ex;
-			}
+			return string.substring(queryIndexPlusQueryLength, string.indexOf(suffix, queryIndexPlusQueryLength));
 		}
 
 		private class Tuple2<T0, T1> {
