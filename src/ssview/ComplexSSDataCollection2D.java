@@ -447,8 +447,19 @@ public void printComplexSVG(PrintWriter outFile) throws Exception {
 									center = new Point2D.Double((a.getX() + b.getX()) / 2d, (a.getY() + b.getY()) / 2d);
 								DrawCircleObject
 									circle = nuc.getDrawCircleObject();
-//								out.println("\t<circle cx=\"" + center.x + "\" cy=\"" + center.y + "\" r=\"" + (circle == null ? Math.min(a.distance(b) / 4f, nuc.getFont().getSize2D()) : circle.getRadius() / 2d) + "\" fill=\"black\"/>");
-								out.println("\t<circle cx=\"" + center.x + "\" cy=\"" + center.y + "\" r=\"" + (circle == null ? nuc.getFont().getSize2D() / 3f : circle.getRadius()) + "\" fill=\"black\"/>");
+								double
+									radius = (circle == null ? nuc.getFont().getSize2D() / 3f : circle.getRadius()) * 0.5d;
+								out.println("\t<circle cx=\"" + center.x + "\" cy=\"" + center.y + "\" r=\"" + radius + "\" fill=\"black\"/>");
+							} else if (nuc.inMisMatchBasePair()) {
+								Point2D.Double
+									a = new Point2D.Double(nuc.getX() + dx * 1.1d, nuc.getY() + dy), 
+									b = new Point2D.Double(pair.getX() + dx * 1.1d, pair.getY() + dy),
+									center = new Point2D.Double((a.getX() + b.getX()) / 2d, (a.getY() + b.getY()) / 2d);
+								DrawCircleObject
+									circle = nuc.getDrawCircleObject();
+								double
+									radius = (circle == null ? nuc.getFont().getSize2D() / 3d : circle.getRadius()) * 0.5d;
+								out.println("\t<circle cx=\"" + center.x + "\" cy=\"" + center.y + "\" r=\"" + radius + "\" stroke=\"black\" fill-opacity=\"0.0\" stroke-width=\"" + (radius / 10d) + "\"/>");
 							}
 						}
 					}
