@@ -73,7 +73,7 @@ and provides export/import functionality between some of them.
 * Placement of label line segments is incorrect
 	* This bug fix is in progress.
 	
-The available jar file has been compiled using a recent version of Java (Java v13) 	
+The available jar file has been compiled using AdoptOpenJDK 14.	
 
 
 
