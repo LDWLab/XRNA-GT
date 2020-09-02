@@ -1,4 +1,4 @@
-##DEFINE CURRENT PROJECT
+## CURRENT PROJECT
 This is a GT fork of the XRNA program.
 
 
