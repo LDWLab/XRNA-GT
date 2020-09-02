@@ -2,8 +2,7 @@
 This is a GT fork of the XRNA program.
 
 
-The project provides the adjustments to the original XRNA program from the Noller Lab
-http://rna.ucsc.edu/rnacenter/xrna/xrna_download.html
+The XRNA-GT project provides the adjustments to the original XRNA program from the Noller Lab: B. Weiser, R. R. Gutell, H.F. Noller http://rna.ucsc.edu/rnacenter/xrna/xrna_download.html (unpubished).
 
 
 All essential 2D layout editing features have been preserved.
