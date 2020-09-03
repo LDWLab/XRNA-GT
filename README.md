@@ -71,8 +71,9 @@ and provides export/import functionality between some of them.
 	* This bug fix is in progress.
 * Placement of label line segments is incorrect
 	* This bug fix is in progress.
-	
-The available jar file has been compiled using AdoptOpenJDK 14.	
+
+The executable (jar) is located at XRNA\xrna_COOL.jar
+	* The jar file was compiled using AdoptOpenJDK 14, a Java JDK alternative.	
 
 
 
