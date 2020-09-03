@@ -1,8 +1,8 @@
-## CURRENT PROJECT
+## CURRENT PROJECT XRNA-GT
 This is a GT fork of the XRNA program.
 
 
-The XRNA-GT project provides the adjustments to the original XRNA program from the Noller Lab: B. Weiser, R. R. Gutell, H.F. Noller http://rna.ucsc.edu/rnacenter/xrna/xrna_download.html (unpubished).
+The XRNA-GT project provides the adjustments to the original XRNA program from the Noller Lab at UC Santa Cruiz: B. Weiser, R. R. Gutell, H.F. Noller http://rna.ucsc.edu/rnacenter/xrna/xrna_download.html (unpubished).
 
 
 All essential 2D layout editing features have been preserved.
