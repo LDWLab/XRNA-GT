@@ -2,14 +2,14 @@
 This is a GT fork of the XRNA program.
 
 
-The XRNA-GT project provides the adjustments to the original XRNA program from the Noller Lab at UC Santa Cruiz: B. Weiser, R. R. Gutell, H.F. Noller http://rna.ucsc.edu/rnacenter/xrna/xrna_download.html (unpubished).
+The XRNA-GT project provides the adjustments to the original XRNA program from the Noller Lab at UC Santa Cruz: B. Weiser, R. R. Gutell, H.F. Noller http://rna.ucsc.edu/rnacenter/xrna/xrna_download.html (unpubished).
 
 
 All essential 2D layout editing features have been preserved.
 
 
 The modified version adds support to several additional formats: 
-* SVG (RiboVision,  Faraday Discuss. 2014;169:195-207. doi: 10.1039/c3fd00126a; RNACentral, https://doi.org/10.1093/nar/gky1034); 
+* SVG (RiboVision,  Faraday Discuss. 2014;169:195-207. doi: 10.1039/c3fd00126a; RNAcentral, https://doi.org/10.1093/nar/gky1034); 
 * CSV (RiboVision, Faraday Discuss. 2014;169:195-207. doi: 10.1039/c3fd00126a);
 * TR (Traveler, BMC Bioinformatics. 2017 Nov 15;18(1):487. doi: 10.1186/s12859-017-1885-4);
 
