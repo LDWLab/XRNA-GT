@@ -368,6 +368,19 @@ public void printComplexSVG(PrintWriter outFile) throws Exception {
 		Object obj = this.getItemAt(complexID);
 		if (obj != null) { ((ComplexCollection)obj).printComplexSVG(outFile); }
 	}
+//	Tuple4<Double, Double, Double, Double>
+//		bounds = this.bounds();
+//	double
+//		minX = bounds.t0,
+//		minY = bounds.t1,
+//		maxX = bounds.t2,
+//		maxY = bounds.t3;
+//	for (int complexID = 0; complexID < this.getItemCount(); complexID++) {
+//		Object obj = this.getItemAt(complexID);
+//		if (obj != null) {
+//			((ComplexCollection)obj).printComplexSVG(outFile, new LinkedList<>(), minX, minY, maxX, maxY);
+//		}
+//	}
 }
 
 public ComplexScene2D

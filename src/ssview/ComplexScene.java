@@ -1,19 +1,19 @@
 package ssview;
 
-import java.awt.geom.*;
-import java.awt.*;
-import java.io.*;
-import java.util.*;
+import java.awt.Font;
+import java.awt.geom.Point2D;
+import java.util.Enumeration;
+import java.util.Vector;
 
-import javax.swing.tree.*;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeNode;
 
-import jimage.DrawObjectCollection;
-import jimage.DrawObject;
 import jimage.DrawCharObject;
 import jimage.DrawLineObject;
-import jimage.DrawObjectLeafNode;
-
-import util.math.*;
+import jimage.DrawObject;
+import jimage.DrawObjectCollection;
+import util.Tuple4;
+import util.math.BLine2D;
 
 /**
 ** List of complexs in scene. Contains labels specific to this scene.
@@ -107,6 +107,25 @@ getItemAt(int index)
 	if (index < 0)
 		return (null);
 	return((DrawObjectCollection)((Vector)this.getCollection()).elementAt(index));
+}
+
+public Tuple4<Double, Double, Double, Double> bounds() throws Exception {
+	double 
+		minX = Double.MAX_VALUE,
+		minY = Double.MAX_VALUE,
+		maxX = -Double.MAX_VALUE,
+		maxY = -Double.MAX_VALUE;
+	for (int complexItemID = 0; complexItemID < this.getItemCount(); complexItemID++) {
+		NucCollection2D
+			nucCol2D = (NucCollection2D)this.getItemAt(complexItemID);
+		double
+			temp;
+		if ((temp = nucCol2D.getSmallestXVal()) < minX) { minX = temp; }
+		if ((temp = nucCol2D.getSmallestYVal()) < minY) { minY = temp; }
+		if ((temp = nucCol2D.getLargestXVal()) > maxX) { maxX = temp; }
+		if ((temp = nucCol2D.getLargestYVal()) > maxY) { maxY = temp; }
+	}
+	return new Tuple4<>(minX, minY, maxX, maxY);
 }
 
 // this is different than one for SSData

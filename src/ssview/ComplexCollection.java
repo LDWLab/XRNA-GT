@@ -606,7 +606,8 @@ throws Exception {
 	Point2D
 		p1 = bLine2D.getP1(),
 		p2 = bLine2D.getP2();
-	int nucID = Integer.parseInt(drawStringObject.getDrawString());
+	int
+		nucID = Integer.parseInt(drawStringObject.getDrawString());
 	Nuc2D
 		nuc = sstr.getNuc2DAt(nucID);
 	double
@@ -677,22 +678,18 @@ throws Exception
 {
 	if (this.getLabelList() == null) 
 		return;
-	//scale
 	if (type == 0) {
+		//scale
 		for (Enumeration e = getLabelList().elements();e.hasMoreElements();)
 			this.scaleLabelListCSV((DrawObject)e.nextElement(), scale);
-	}
-	//shift
-	else if (type == 1) {
+	} else if (type == 1) {
+		//shift
 		for (Enumeration e = getLabelList().elements();e.hasMoreElements();)
 			this.shiftLabelListCSV((DrawObject)e.nextElement(), xChange, yChange);
-	}
-	else if (type == 2) {
+	} else if (type == 2) {
 		for (Enumeration e = getLabelList().elements();e.hasMoreElements();)
 			this.yLabelListCSV((DrawObject)e.nextElement());
-	}
-	
-	else {
+	} else {
 		System.out.println("Not a valid label adjustment type\n");
 	}
 }
@@ -852,15 +849,15 @@ throws Exception
 {
 }
 
-public void printComplexTR(PrintWriter outFile) throws Exception { }
-
 public void printComplexSVG(PrintWriter outFile) throws Exception { }
 
-public void printComplexCSV(PrintWriter outFile, double minX, double minY, double maxX, double maxY) throws Exception { }
+public void printComplexTR(PrintWriter outFile) throws Exception { }
 
-public void printComplexTR(PrintWriter outFile, double minX, double minY, double maxX, double maxY) throws Exception { }
+public void printComplexCSV(PrintWriter outFile, LinkedList<Nuc2D> nucleotides, double minX, double minY, double maxX, double maxY) throws Exception { }
 
-public void printComplexSVG(PrintWriter outFile, double minX, double minY, double maxX, double maxY) throws Exception { }
+public void printComplexTR(PrintWriter outFile, LinkedList<Nuc2D> nucleotides, double minX, double minY, double maxX, double maxY) throws Exception { }
+
+public void printComplexSVG(PrintWriter outFile, LinkedList<Nuc2D> nucleotides, double minX, double minY, double maxX, double maxY) throws Exception { }
 
 public void
 printComplexXML(File outFile)

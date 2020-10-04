@@ -37,8 +37,8 @@ extends NucCollection
 	//Boundaries for letters
 	public static final double
 		MAX_XCO = 576,
-		MAX_YCO = 756,
 		MIN_XCO = 36,
+		MAX_YCO = 756,
 		MIN_YCO = 36;
 
 public
@@ -1744,616 +1744,428 @@ throws Exception
 }
 
 @Override
-public void printComplexCSV(PrintWriter out, double minX, double minY, double maxX, double maxY) throws Exception {
-	Vector delineators = this.getItemListDelineators();
-	if (delineators == null)
-		return;
-	if (delineators.size() == 0)
-		return;
-	Nuc2D startNuc = (Nuc2D)((NucNode)delineators.elementAt(0));
-
-	SSData2D sstr = null;
-
-	String moleculeName = this.getName();
-
-	if (moleculeName == null) {
-		if (this instanceof RNABasePair2D)
-			moleculeName = "RNABasePair_" + startNuc.getID();
-		/*
-		else if (this instanceof RNAComplexArea2D)
-			moleculeName = "RNAComplexArea_" + startNuc.getID();
-		*/
-		else if (this instanceof RNASubDomain2D)
-			moleculeName = "RNASubDomain_" + startNuc.getID();
-		else if (this instanceof RNAHelix2D)
-			moleculeName = "RNAHelix_" + startNuc.getID();
-		else if (this instanceof RNACycle2D)
-			moleculeName = "RNACycle_" + startNuc.getID();
-		else if (this instanceof RNAListNucs2D)
-			moleculeName = "RNAListNucs_" + startNuc.getID();
-		else if (this instanceof RNASingleStrand2D)
-			moleculeName = "RNASingleStrand_" + startNuc.getID();
-		else if (this instanceof RNAStackedHelix2D)
-			moleculeName = "RNAStackedHelix_" + startNuc.getID();
-		else if (this instanceof SSData2D)
-			moleculeName = "SSData_" + startNuc.getID();
-		else
-			moleculeName = "Unknown type";
-	}
-	
-	// print out nucs
-	if (sstr == null) {
-		sstr = ((Nuc2D)((NucNode)delineators.elementAt(0))).getParentSSData2D();
-		if (sstr == null)
-			return;
-	}
-	
-	//scaling and centering coordinates to fit in box
-	// upperLeft(36,36), upperRight(576,36), lowerRight(576,756), lowerRight(36,756)
-	
-	this.reverseY();
-	minY = MAX_YCO - maxY;
-	maxY = MAX_YCO - minY;
-//	minY = MAX_YCO - minY;
-//	maxY = MAX_YCO - maxY;
-//	double temp = minY;
-//	minY = maxY;
-//	maxY = temp;
-	this.scaleCSV(minX, minY, maxX, maxY); //also scales font of nuc and labels
-	double scale = Math.min((MAX_XCO - MIN_XCO) / (maxX - minX), (MAX_YCO - MIN_YCO) / (maxY - minY));
-	minX *= scale;
-	minY *= scale;
-	maxX *= scale;
-	maxY *= scale;
-	this.ridNegatives(minX, minY, maxX, maxY);
-	double
-		shiftX = MIN_XCO - minX,
-		shiftY = MIN_YCO - minY;
-	minX += shiftX;
-	maxX += shiftX;
-	minY += shiftY;
-	maxY += shiftY;
-	this.centerEverything(minX, minY, maxX, maxY);
-	
-	int counter = 0;
-	for (int i = 0; i < delineators.size(); i+=2) {
+public void printComplexCSV(PrintWriter out, LinkedList<Nuc2D> nucleotides, double minX, double minY, double maxX, double maxY) throws Exception {
+	Vector
+		delineators = this.getItemListDelineators();
+	if (delineators != null && delineators.size() > 0) {
 		Nuc2D
-			nuc0 = (Nuc2D)((NucNode)delineators.elementAt(i)),
-			nuc1 = (Nuc2D)((NucNode)delineators.elementAt(i+1));
-
-		// print out formatted nucs (for now throws exception in getX,Y() if unformatted
-		for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
-			Nuc2D nuc = sstr.getNuc2DAt(nucID);
-			if (nuc == null)
-				continue;
-			
-			//only print font size once
-			if (counter == 0) {
-				out.print(moleculeName + ":" + nucID + "," + nuc.getNucChar() + "," +
-						StringUtil.roundStrVal(nuc.getX(), 3) + "," +
-						StringUtil.roundStrVal(nuc.getY(), 3) + "," + Integer.toHexString(nuc.getColor().
-								getRGB() & 0x00ffffff) +  "," + nuc.getFont().getSize());
-				counter++;
+			startNuc = (Nuc2D)(delineators.elementAt(0));
+		String
+			moleculeName = this.getName();
+		if (moleculeName == null) {
+			if (this instanceof RNABasePair2D) {
+				moleculeName = "RNABasePair_" + startNuc.getID();
+			/*
+			} else if (this instanceof RNAComplexArea2D) {
+				moleculeName = "RNAComplexArea_" + startNuc.getID();
+			*/
+			} else if (this instanceof RNASubDomain2D) {
+				moleculeName = "RNASubDomain_" + startNuc.getID();
+			} else if (this instanceof RNAHelix2D) {
+				moleculeName = "RNAHelix_" + startNuc.getID();
+			} else if (this instanceof RNACycle2D) {
+				moleculeName = "RNACycle_" + startNuc.getID();
+			} else if (this instanceof RNAListNucs2D) {
+				moleculeName = "RNAListNucs_" + startNuc.getID();
+			} else if (this instanceof RNASingleStrand2D) {
+				moleculeName = "RNASingleStrand_" + startNuc.getID();
+			} else if (this instanceof RNAStackedHelix2D) {
+				moleculeName = "RNAStackedHelix_" + startNuc.getID();
+			} else if (this instanceof SSData2D) {
+				moleculeName = "SSData_" + startNuc.getID();
 			} else {
-				out.print(moleculeName + ":" + nucID + "," + nuc.getNucChar() + "," +
-					StringUtil.roundStrVal(nuc.getX(), 3) + "," +
-					StringUtil.roundStrVal(nuc.getY(), 3) + "," + Integer.toHexString(nuc.getColor().
-					getRGB() & 0x00ffffff) + ","/*Skip fontsize*/ + ",");
-			}
-			/////////////test
-			
-			if (nuc.getLabelList() != null) {
-				nuc.printLabelListCSV(out, sstr);
-				//System.out.println(nuc.getLabelList());
-			}
-			out.print("\n");
-		}
-	}
-	counter = 0;
-}
-
-@Override
-public void printComplexCSV(PrintWriter out) throws Exception {
-	Vector delineators = this.getItemListDelineators();
-	if (delineators == null)
-		return;
-	if (delineators.size() == 0)
-		return;
-	Nuc2D startNuc = (Nuc2D)((NucNode)delineators.elementAt(0));
-
-	SSData2D sstr = null;
-
-	String moleculeName = this.getName();
-
-	if (moleculeName == null) {
-		if (this instanceof RNABasePair2D)
-			moleculeName = "RNABasePair_" + startNuc.getID();
-		/*
-		else if (this instanceof RNAComplexArea2D)
-			moleculeName = "RNAComplexArea_" + startNuc.getID();
-		*/
-		else if (this instanceof RNASubDomain2D)
-			moleculeName = "RNASubDomain_" + startNuc.getID();
-		else if (this instanceof RNAHelix2D)
-			moleculeName = "RNAHelix_" + startNuc.getID();
-		else if (this instanceof RNACycle2D)
-			moleculeName = "RNACycle_" + startNuc.getID();
-		else if (this instanceof RNAListNucs2D)
-			moleculeName = "RNAListNucs_" + startNuc.getID();
-		else if (this instanceof RNASingleStrand2D)
-			moleculeName = "RNASingleStrand_" + startNuc.getID();
-		else if (this instanceof RNAStackedHelix2D)
-			moleculeName = "RNAStackedHelix_" + startNuc.getID();
-		else if (this instanceof SSData2D)
-			moleculeName = "SSData_" + startNuc.getID();
-		else
-			moleculeName = "Unknown type";
-	}
-	
-	// print out nucs
-	if (sstr == null) {
-		sstr = ((Nuc2D)((NucNode)delineators.elementAt(0))).getParentSSData2D();
-		if (sstr == null)
-			return;
-	}
-	
-	//scaling and centering coordinates to fit in box
-	// upperLeft(36,36), upperRight(576,36), lowerRight(576,756), lowerRight(36,756)
-	
-	this.reverseY(); //reverses labels as well
-	this.scaleCSV(); //also scales font of nuc and labels
-	this.ridNegatives();
-	this.centerEverything();
-	
-	int counter = 0;
-	for (int i = 0; i < delineators.size(); i+=2) {
-		Nuc2D nuc0 = (Nuc2D)((NucNode)delineators.elementAt(i));
-		Nuc2D nuc1 = (Nuc2D)((NucNode)delineators.elementAt(i+1));
-
-		// print out formatted nucs (for now throws exception in getX,Y() if unformatted
-		for (int nucID = nuc0.getID();nucID <= nuc1.getID();nucID++) {
-			Nuc2D nuc = sstr.getNuc2DAt(nucID);
-			if (nuc == null)
-				continue;
-			
-			//only print font size once
-			if (counter == 0) {
-				out.print(moleculeName + ":" + nucID + "," + nuc.getNucChar() + "," +
-						StringUtil.roundStrVal(nuc.getX(), 3) + "," +
-						StringUtil.roundStrVal(nuc.getY(), 3) + "," + Integer.toHexString(nuc.getColor().
-								getRGB() & 0x00ffffff) +  "," + nuc.getFont().getSize());
-				counter++;
-			} else {
-				out.print(moleculeName + ":" + nucID + "," + nuc.getNucChar() + "," +
-						StringUtil.roundStrVal(nuc.getX(), 3) + "," +
-						StringUtil.roundStrVal(nuc.getY(), 3) + "," + Integer.toHexString(nuc.getColor().
-								getRGB() & 0x00ffffff) + ","/*Skip fontsize*/ + ",");
-			}
-			/////////////test
-			
-			if (nuc.getLabelList() != null) {
-				nuc.printLabelListCSV(out, sstr);
-				//System.out.println(nuc.getLabelList());
-			}
-			out.print("\n");
-		}
-
-	}
-	counter = 0;
-}
-
-@Override
-public void printComplexTR(PrintWriter out, double minX, double minY, double maxX, double maxY) throws Exception {
-	Vector delineators = this.getItemListDelineators();
-	if (delineators == null || delineators.size() == 0) { return; }
-	Nuc2D startNuc = (Nuc2D)((NucNode)delineators.elementAt(0));
-
-	SSData2D sstr = null;
-
-	String moleculeName = this.getName();
-
-	if (moleculeName == null) {
-		if (this instanceof RNABasePair2D)
-			moleculeName = "RNABasePair_" + startNuc.getID();
-		/*
-		else if (this instanceof RNAComplexArea2D)
-			moleculeName = "RNAComplexArea_" + startNuc.getID();
-		*/
-		else if (this instanceof RNASubDomain2D)
-			moleculeName = "RNASubDomain_" + startNuc.getID();
-		else if (this instanceof RNAHelix2D)
-			moleculeName = "RNAHelix_" + startNuc.getID();
-		else if (this instanceof RNACycle2D)
-			moleculeName = "RNACycle_" + startNuc.getID();
-		else if (this instanceof RNAListNucs2D)
-			moleculeName = "RNAListNucs_" + startNuc.getID();
-		else if (this instanceof RNASingleStrand2D)
-			moleculeName = "RNASingleStrand_" + startNuc.getID();
-		else if (this instanceof RNAStackedHelix2D)
-			moleculeName = "RNAStackedHelix_" + startNuc.getID();
-		else if (this instanceof SSData2D)
-			moleculeName = "SSData_" + startNuc.getID();
-		else
-			moleculeName = "Unknown type";
-	}
-	// print out nucs
-	if (sstr == null) {
-		sstr = ((Nuc2D)((NucNode)delineators.elementAt(0))).getParentSSData2D();
-		if (sstr == null) { return; }
-	}
-	
-	this.reverseY();
-	minY = MAX_YCO - minY;
-	maxY = MAX_YCO - maxY;
-	double temp = minY;
-	minY = maxY;
-	maxY = temp;
-	this.scaleCSV(minX, minY, maxX, maxY); //also scales font of nuc and labels
-	double scale = Math.min((MAX_XCO - MIN_XCO) / (maxX - minX), (MAX_YCO - MIN_YCO) / (maxY - minY));
-	minX *= scale;
-	minY *= scale;
-	maxX *= scale;
-	maxY *= scale;
-	this.ridNegatives(minX, minY, maxX, maxY);
-	double
-		shiftX = MIN_XCO - minX,
-		shiftY = MIN_YCO - minY;
-	minX += shiftX;
-	maxX += shiftX;
-	minY += shiftY;
-	maxY += shiftY;
-	this.centerEverything(minX, minY, maxX, maxY);
-	
-	for (int i = 0; i < delineators.size(); i += 2) {
-		Nuc2D nuc0 = (Nuc2D)((NucNode)delineators.elementAt(i));
-		Nuc2D nuc1 = (Nuc2D)((NucNode)delineators.elementAt(i+1));
-		
-		// print out formatted nucs (for now throws exception in getX,Y() if unformatted
-		for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
-			Nuc2D nuc = sstr.getNuc2DAt(nucID);
-			if (nuc != null) {
-				out.println("<point x=\"" + StringUtil.roundStrVal(nuc.getX(), 3) + 
-					"\" y=\"" + StringUtil.roundStrVal(nuc.getY(), 3) + 
-					"\" b=\"" + nuc.getNucChar() + "\" numbering-label=\"" + nucID + "\" />");
+				moleculeName = "Unknown type";
 			}
 		}
-	}
-}
-
-@Override
-public void printComplexTR(PrintWriter out) throws Exception {
-	Vector delineators = this.getItemListDelineators();
-	if (delineators == null || delineators.size() == 0) { return; }
-	Nuc2D startNuc = (Nuc2D)((NucNode)delineators.elementAt(0));
-
-	SSData2D sstr = null;
-
-	String moleculeName = this.getName();
-
-	if (moleculeName == null) {
-		if (this instanceof RNABasePair2D)
-			moleculeName = "RNABasePair_" + startNuc.getID();
-		/*
-		else if (this instanceof RNAComplexArea2D)
-			moleculeName = "RNAComplexArea_" + startNuc.getID();
-		*/
-		else if (this instanceof RNASubDomain2D)
-			moleculeName = "RNASubDomain_" + startNuc.getID();
-		else if (this instanceof RNAHelix2D)
-			moleculeName = "RNAHelix_" + startNuc.getID();
-		else if (this instanceof RNACycle2D)
-			moleculeName = "RNACycle_" + startNuc.getID();
-		else if (this instanceof RNAListNucs2D)
-			moleculeName = "RNAListNucs_" + startNuc.getID();
-		else if (this instanceof RNASingleStrand2D)
-			moleculeName = "RNASingleStrand_" + startNuc.getID();
-		else if (this instanceof RNAStackedHelix2D)
-			moleculeName = "RNAStackedHelix_" + startNuc.getID();
-		else if (this instanceof SSData2D)
-			moleculeName = "SSData_" + startNuc.getID();
-		else
-			moleculeName = "Unknown type";
-	}
-	// print out nucs
-	if (sstr == null) {
-		sstr = ((Nuc2D)((NucNode)delineators.elementAt(0))).getParentSSData2D();
-		if (sstr == null) { return; }
-	}
-	
-//	this.reverseY(); //reverses labels as well
-	this.scaleCSV(); //also scales font of nuc and labels
-	this.ridNegatives();
-	this.centerEverything();
-	
-	for (int i = 0; i < delineators.size(); i += 2) {
-		Nuc2D nuc0 = (Nuc2D)((NucNode)delineators.elementAt(i));
-		Nuc2D nuc1 = (Nuc2D)((NucNode)delineators.elementAt(i+1));
-		
-		// print out formatted nucs (for now throws exception in getX,Y() if unformatted
-		for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
-			Nuc2D nuc = sstr.getNuc2DAt(nucID);
-			if (nuc != null) {
-				out.println("<point x=\"" + StringUtil.roundStrVal(nuc.getX(), 3) + 
-					"\" y=\"" + StringUtil.roundStrVal(nuc.getY(), 3) + 
-					"\" b=\"" + nuc.getNucChar() + "\"/>");
-			}
-		}
-	}
-}
-
-@Override
-public void printComplexSVG(PrintWriter out, double minX, double minY, double maxX, double maxY) throws Exception {
-	Vector delineators = this.getItemListDelineators();
-	if (delineators == null || delineators.size() == 0) { return; }
-	Nuc2D startNuc = (Nuc2D)((NucNode)delineators.elementAt(0));
-
-	SSData2D sstr = null;
-
-	String moleculeName = this.getName();
-
-	if (moleculeName == null) {
-		if (this instanceof RNABasePair2D)
-			moleculeName = "RNABasePair_" + startNuc.getID();
-		/*
-		else if (this instanceof RNAComplexArea2D)
-			moleculeName = "RNAComplexArea_" + startNuc.getID();
-		*/
-		else if (this instanceof RNASubDomain2D)
-			moleculeName = "RNASubDomain_" + startNuc.getID();
-		else if (this instanceof RNAHelix2D)
-			moleculeName = "RNAHelix_" + startNuc.getID();
-		else if (this instanceof RNACycle2D)
-			moleculeName = "RNACycle_" + startNuc.getID();
-		else if (this instanceof RNAListNucs2D)
-			moleculeName = "RNAListNucs_" + startNuc.getID();
-		else if (this instanceof RNASingleStrand2D)
-			moleculeName = "RNASingleStrand_" + startNuc.getID();
-		else if (this instanceof RNAStackedHelix2D)
-			moleculeName = "RNAStackedHelix_" + startNuc.getID();
-		else if (this instanceof SSData2D)
-			moleculeName = "SSData_" + startNuc.getID();
-		else
-			moleculeName = "Unknown type";
-	}
-	// print out nucs
-	if (sstr == null) {
-		sstr = ((Nuc2D)((NucNode)delineators.elementAt(0))).getParentSSData2D();
-		if (sstr == null) { return; }
-	}
-//	this.reverseY(); //reverses labels as well
-//	this.scaleCSV(); //also scales font of nuc and labels
-//	this.ridNegatives();
-//	this.centerEverything();
-	this.reverseY();
-	minY = MAX_YCO - minY;
-	maxY = MAX_YCO - maxY;
-	double temp = minY;
-	minY = maxY;
-	maxY = temp;
-	this.scaleCSV(minX, minY, maxX, maxY); //also scales font of nuc and labels
-	double scale = Math.min((MAX_XCO - MIN_XCO) / (maxX - minX), (MAX_YCO - MIN_YCO) / (maxY - minY));
-	minX *= scale;
-	minY *= scale;
-	maxX *= scale;
-	maxY *= scale;
-	this.ridNegatives(minX, minY, maxX, maxY);
-	double
-		shiftX = MIN_XCO - minX,
-		shiftY = MIN_YCO - minY;
-	minX += shiftX;
-	maxX += shiftX;
-	minY += shiftY;
-	maxY += shiftY;
-	this.centerEverything(minX, minY, maxX, maxY);
-	
-	LinkedList<String>
-		letters = new LinkedList<String>(),
-		labelsLines = new LinkedList<String>(),
-		labelsText = new LinkedList<String>(),
-		circles = new LinkedList<String>();
-	for (int i = 0; i < delineators.size(); i += 2) {
-		Nuc2D
-			nuc0 = (Nuc2D)((NucNode)delineators.elementAt(i)),
-			nuc1 = (Nuc2D)((NucNode)delineators.elementAt(i + 1));
-		
-		// print out formatted nucs (for now throws exception in getX,Y() if unformatted
-		for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
-			Nuc2D
-				nuc = sstr.getNuc2DAt(nucID);
-			FontMetrics
-				metrics = ComplexParentFrame.frame.getFontMetrics(nuc.getFont());
-			if (nuc != null) {
-				double
-					nucX = nuc.getX(),
-					nucY = nuc.getY();
-				Font
-					font = nuc.getFont();
-				letters.add("<text id=\"" + nucID + "\" transform=\"matrix(1 0 0 1 " + StringUtil.roundStrVal(nucX, 2) + " " + StringUtil.roundStrVal(nucY, 2) + ")\" fill=\"black\" font-family=\"" + font.getFamily() + "\" font-weight=\"normal\" font-size=\"" + font.getSize() + "\">" + nuc.getNucChar() + "</text>");
-				double
-					dx = metrics.charWidth(nuc.getNucChar()) / 2d,
-					dy = -nuc.getFont().getSize2D() / 2d;
-				if (nuc.getLabelList() != null) {
-					Vector
-						v = nuc.getLabelList();
-					for (int index = 1; index < v.size();) {
-						DrawLineObject
-							line = (DrawLineObject)v.get(index - 1);
-						if (line.getIsPickable()) {
-							BLine2D
-								bline2D = line.getBLine2D();
-							Point2D
-								p1 = bline2D.getP1(),
-								p2 = bline2D.getP2();
-							labelsLines.add("<line fill=\"none\" stroke=\"black\" stroke-width=\"" + line.getLineStroke().getLineWidth() + "\" stroke-linejoin=\"round\" stroke-miterlimit=\"10\" x1=\"" + StringUtil.roundStrVal(nucX + dx + p1.getX(), 2) + "\" y1=\"" + StringUtil.roundStrVal(nucY + dy + p1.getY(), 2) + "\" x2=\"" + StringUtil.roundStrVal(nucX + dx + p2.getX(), 2) + "\" y2=\"" + StringUtil.roundStrVal(nucY + dy + p2.getY(), 2) + "\"/>");
-						}
-						try {
-							DrawStringObject
-								label = (DrawStringObject)v.get(index);
-							if (label.getIsPickable()) {
-								font = label.getFont();
-
-								metrics = ComplexParentFrame.frame.getFontMetrics(font);
-								dx = -metrics.stringWidth(label.getDrawString()) / 2d / 1.25d;
-								labelsText.add("<text transform=\"matrix(1 0 0 1 " + StringUtil.roundStrVal(nucX + label.getX() + dx, 2) + " " + StringUtil.roundStrVal(nucY + label.getY(), 2) + ")\" fill=\"" + Integer.toHexString(label.getColor().getRGB() & 0x00ffffff) + "\" font-family=\"" + font.getFamily() + "\" font-size=\"" + font.getSize() + "\">" + label.getDrawString() + "</text>");
-//								labelsText.add("<text transform=\"matrix(1 0 0 1 " + StringUtil.roundStrVal(nucX, 2) + " " + StringUtil.roundStrVal(nucY, 2) + ")\" fill=\"" + Integer.toHexString(label.getColor().getRGB() & 0x00ffffff) + "\" font-family=\"" + font.getFamily() + "\" font-size=\"" + font.getSize() + "\">" + label.getDrawString() + "</text>");
+		SSData2D
+			sstr = ((Nuc2D)((NucNode)delineators.elementAt(0))).getParentSSData2D();
+		if (sstr != null) {
+			for (int i = 0; i < delineators.size(); i += 2) {
+				Nuc2D
+					nuc0 = (Nuc2D)delineators.elementAt(i),
+					nuc1 = (Nuc2D)delineators.elementAt(i + 1);
+				for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
+					Nuc2D
+						nucOriginal = (Nuc2D)sstr.getNuc2DAt(nucID),
+						nucCopy = new Nuc2D(nucOriginal);
+					if (nucOriginal != null) {
+						Vector
+							labelListOriginal = nucOriginal.getLabelList();
+						if (labelListOriginal != null) {
+							Vector
+								labelListCopy = new Vector();
+							for (Object labelObject : labelListOriginal) {
+								if (labelObject instanceof DrawStringObject) {
+									labelListCopy.add(new DrawStringObject((DrawStringObject)labelObject));
+								} else if (labelObject instanceof DrawLineObject) {
+									labelListCopy.add(new DrawLineObject((DrawLineObject)labelObject));
+								}
 							}
-							index += 2;
-						} catch (ClassCastException ex) {
-							index++;
+							nucCopy.setLabelList(labelListCopy);
 						}
+						nucleotides.add(nucCopy);
 					}
 				}
 			}
+			this.reverseY(nucleotides);
+			minY = MAX_YCO - maxY;
+			maxY = MAX_YCO - minY;
+//			minY = MAX_YCO - minY;
+//			maxY = MAX_YCO - maxY;
+//			double temp = minY;
+//			minY = maxY;
+//			maxY = temp;
+			this.scaleEverything(nucleotides, minX, minY, maxX, maxY); //also scales font of nuc and labels
+			double
+				scale = Math.min((MAX_XCO - MIN_XCO) / (maxX - minX), (MAX_YCO - MIN_YCO) / (maxY - minY));
+			minX *= scale;
+			minY *= scale;
+			maxX *= scale;
+			maxY *= scale;
+			this.ridNegatives(nucleotides, minX, minY);
+			double
+				shiftX = MIN_XCO - minX,
+				shiftY = MIN_YCO - minY;
+			minX += shiftX;
+			maxX += shiftX;
+			minY += shiftY;
+			maxY += shiftY;
+			this.centerEverything(nucleotides, maxX, maxY);
+			
+			for (Nuc2D nucleotide : nucleotides) {
+				out.print(moleculeName + ":" + nucleotide.getID() + "," + nucleotide.getNucChar() + "," + StringUtil.roundStrVal(nucleotide.getX(), 3) + "," + StringUtil.roundStrVal(nucleotide.getY(), 3) + "," + Integer.toHexString(nucleotide.getColor().getRGB() & 0x00ffffff) + "," + nucleotide.getFont().getSize());
+				Vector
+					labelList = nucleotide.getLabelList();
+				if (labelList != null) {
+					for (int j = 1; j < labelList.size(); j += 2) {
+						DrawLineObject
+							drawLineObject = (DrawLineObject)labelList.get(j - 1);
+						DrawStringObject
+							drawStringObject = (DrawStringObject)labelList.get(j);
+						if (drawLineObject.getIsPickable() && drawStringObject.getIsPickable()) {
+							BLine2D
+								bLine2D = drawLineObject.getBLine2D();
+							Point2D
+								p1 = bLine2D.getP1(),
+								p2 = bLine2D.getP2();
+							double
+								nucX = nucleotide.getX(),
+								nucY = nucleotide.getY();
+							out.print("," + StringUtil.roundStrVal(nucX + p1.getX(), 2) + "," + StringUtil.roundStrVal(nucY + p1.getY(), 2) + "," + StringUtil.roundStrVal(nucX + p2.getX(), 2) + "," + StringUtil.roundStrVal(nucY + p2.getY(), 2) + "," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + "," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) + "," + StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + drawStringObject.getDrawString() + "," + drawStringObject.getFont().getSize() + "," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff));
+						}
+					}
+				}
+				out.println();
+			}
+//			for (int i = 0; i < delineators.size(); i+=2) {
+//				Nuc2D
+//					nuc0 = (Nuc2D)((NucNode)delineators.elementAt(i)),
+//					nuc1 = (Nuc2D)((NucNode)delineators.elementAt(i+1));
+//				for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
+//					Nuc2D
+//						nuc = sstr.getNuc2DAt(nucID);
+//					if (nuc != null) {
+//						String
+//							outputLine = moleculeName + ":" + nucID + "," + nuc.getNucChar() + "," + StringUtil.roundStrVal(nuc.getX(), 3) + "," + StringUtil.roundStrVal(nuc.getY(), 3) + "," + Integer.toHexString(nuc.getColor().getRGB() & 0x00ffffff) + "," + nuc.getFont().getSize();
+//						out.print(outputLine);
+//						Vector
+//							labelList = nuc.getLabelList();
+//						if (labelList != null) {
+//							int
+//								labelListSize = labelList.size();
+//							for (int j = 1; j < labelListSize; j += 2) {
+//								DrawLineObject
+//									drawLineObject = (DrawLineObject)labelList.get(j - 1);
+//								DrawStringObject
+//									drawStringObject = (DrawStringObject)labelList.get(j);
+//								if (drawLineObject.getIsPickable() && drawStringObject.getIsPickable()) {
+//									BLine2D
+//										bLine2D = drawLineObject.getBLine2D();
+//									Point2D
+//										p1 = bLine2D.getP1(),
+//										p2 = bLine2D.getP2();
+//									double
+//										nucX = nuc.getX(),
+//										nucY = nuc.getY();
+////									System.out.println(drawStringObject.getDrawString());
+//									out.print(", " + StringUtil.roundStrVal(nucX, 2) + "," + StringUtil.roundStrVal(nucY, 2) + "," + StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + "," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) + "," + (StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + drawStringObject.getDrawString()+ "," + drawStringObject.getFont().getSize() + "," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff)));
+////									out.print(", " + StringUtil.roundStrVal(nucX + p1.getX(), 2) + "," + StringUtil.roundStrVal(nucY + p1.getY(), 2) + "," + StringUtil.roundStrVal(nucX + p2.getX(), 2) + "," + StringUtil.roundStrVal(nucY + p2.getY(), 2) + "," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + "," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) + "," + (StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + drawStringObject.getDrawString()+ "," + drawStringObject.getFont().getSize() + "," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff)));
+//								}
+//							}
+//						}
+//						out.println();
+//					}
+//				}
+//			}
 		}
-		out.println("<g id=\"Labels_Lines\">");
-		for (String labelsLinesI : labelsLines) {
-			out.println("\t" + labelsLinesI);
-		}
-		out.println("</g>");
-		out.println("<g id=\"Labels_Text\">");
-		for (String labelsTextI : labelsText) {
-			out.println("\t" + labelsTextI);
-		}
-		out.println("</g>");
-		out.println("<g id=\"Letters\">");
-		for (String lettersI : letters) {
-			out.println("\t" + lettersI);
-		}
-		out.println("</g>");
-		out.println("<g id=\"Circles\">");
-		for (String circlesI : circles) {
-			out.println("\t" + circlesI);
-		}
-		out.println("</g>");
 	}
 }
 
+
+
 @Override
-public void printComplexSVG(PrintWriter out) throws Exception {
+public void printComplexTR(PrintWriter out, LinkedList<Nuc2D> nucleotides, double minX, double minY, double maxX, double maxY) throws Exception {
 	Vector delineators = this.getItemListDelineators();
-	if (delineators == null || delineators.size() == 0) { return; }
-	Nuc2D startNuc = (Nuc2D)((NucNode)delineators.elementAt(0));
-
-	SSData2D sstr = null;
-
-	String moleculeName = this.getName();
-
-	if (moleculeName == null) {
-		if (this instanceof RNABasePair2D)
-			moleculeName = "RNABasePair_" + startNuc.getID();
-		/*
-		else if (this instanceof RNAComplexArea2D)
-			moleculeName = "RNAComplexArea_" + startNuc.getID();
-		*/
-		else if (this instanceof RNASubDomain2D)
-			moleculeName = "RNASubDomain_" + startNuc.getID();
-		else if (this instanceof RNAHelix2D)
-			moleculeName = "RNAHelix_" + startNuc.getID();
-		else if (this instanceof RNACycle2D)
-			moleculeName = "RNACycle_" + startNuc.getID();
-		else if (this instanceof RNAListNucs2D)
-			moleculeName = "RNAListNucs_" + startNuc.getID();
-		else if (this instanceof RNASingleStrand2D)
-			moleculeName = "RNASingleStrand_" + startNuc.getID();
-		else if (this instanceof RNAStackedHelix2D)
-			moleculeName = "RNAStackedHelix_" + startNuc.getID();
-		else if (this instanceof SSData2D)
-			moleculeName = "SSData_" + startNuc.getID();
-		else
-			moleculeName = "Unknown type";
-	}
-	// print out nucs
-	if (sstr == null) {
-		sstr = ((Nuc2D)((NucNode)delineators.elementAt(0))).getParentSSData2D();
-		if (sstr == null) { return; }
-	}
-	this.reverseY(); //reverses labels as well
-	this.scaleCSV(); //also scales font of nuc and labels
-	this.ridNegatives();
-	this.centerEverything();
+	if (delineators != null && delineators.size() > 0) {
+		Nuc2D
+			startNuc = (Nuc2D)delineators.elementAt(0);
 	
-	LinkedList<String>
-		letters = new LinkedList<String>(),
-		labelsLines = new LinkedList<String>(),
-		labelsText = new LinkedList<String>(),
-		circles = new LinkedList<String>();
-	for (int i = 0; i < delineators.size(); i += 2) {
-		Nuc2D nuc0 = (Nuc2D)((NucNode)delineators.elementAt(i));
-		Nuc2D nuc1 = (Nuc2D)((NucNode)delineators.elementAt(i+1));
-		System.out.println("nuc0: " + nuc0.getID() + " nuc1: " + nuc1.getID());
-		
-		// print out formatted nucs (for now throws exception in getX,Y() if unformatted
-		for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
-			Nuc2D nuc = sstr.getNuc2DAt(nucID);
-			if (nuc != null) {
+		String
+			moleculeName = this.getName();
+		if (moleculeName == null) {
+			if (this instanceof RNABasePair2D)
+				moleculeName = "RNABasePair_" + startNuc.getID();
+			/*
+			else if (this instanceof RNAComplexArea2D)
+				moleculeName = "RNAComplexArea_" + startNuc.getID();
+			*/
+			else if (this instanceof RNASubDomain2D)
+				moleculeName = "RNASubDomain_" + startNuc.getID();
+			else if (this instanceof RNAHelix2D)
+				moleculeName = "RNAHelix_" + startNuc.getID();
+			else if (this instanceof RNACycle2D)
+				moleculeName = "RNACycle_" + startNuc.getID();
+			else if (this instanceof RNAListNucs2D)
+				moleculeName = "RNAListNucs_" + startNuc.getID();
+			else if (this instanceof RNASingleStrand2D)
+				moleculeName = "RNASingleStrand_" + startNuc.getID();
+			else if (this instanceof RNAStackedHelix2D)
+				moleculeName = "RNAStackedHelix_" + startNuc.getID();
+			else if (this instanceof SSData2D)
+				moleculeName = "SSData_" + startNuc.getID();
+			else
+				moleculeName = "Unknown type";
+		}
+		// print out nucs
+		SSData2D
+			sstr = ((Nuc2D)((NucNode)delineators.elementAt(0))).getParentSSData2D();
+		if (sstr != null) {
+			for (int i = 1; i < delineators.size(); i += 2) {
+				Nuc2D
+					nuc0 = (Nuc2D)delineators.elementAt(i - 1),
+					nuc1 = (Nuc2D)delineators.elementAt(i);
+				for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
+					Nuc2D
+						nuc = sstr.getNuc2DAt(nucID);
+					if (nuc != null) {
+						nucleotides.add(new Nuc2D(nuc));
+					}
+				}
+			}
+			
+			this.reverseY(nucleotides);
+			minY = MAX_YCO - minY;
+			maxY = MAX_YCO - maxY;
+			double temp = minY;
+			minY = maxY;
+			maxY = temp;
+			this.scaleEverything(nucleotides, minX, minY, maxX, maxY); //also scales font of nuc and labels
+			double scale = Math.min((MAX_XCO - MIN_XCO) / (maxX - minX), (MAX_YCO - MIN_YCO) / (maxY - minY));
+			minX *= scale;
+			minY *= scale;
+			maxX *= scale;
+			maxY *= scale;
+			this.ridNegatives(nucleotides, minX, minY);
+			double
+				shiftX = MIN_XCO - minX,
+				shiftY = MIN_YCO - minY;
+			minX += shiftX;
+			maxX += shiftX;
+			minY += shiftY;
+			maxY += shiftY;
+			this.centerEverything(nucleotides, maxX, maxY);
+			
+			for (Nuc2D nucleotide : nucleotides) {
+				out.println("<point x=\"" + StringUtil.roundStrVal(nucleotide.getX(), 3) + "\" y=\"" + StringUtil.roundStrVal(nucleotide.getY(), 3) + "\" b=\"" + nucleotide.getNucChar() + "\" numbering-label=\"" + nucleotide.getID() + "\" />");
+			}
+//			for (int i = 0; i < delineators.size(); i += 2) {
+//				Nuc2D nuc0 = (Nuc2D)((NucNode)delineators.elementAt(i));
+//				Nuc2D nuc1 = (Nuc2D)((NucNode)delineators.elementAt(i+1));
+//				
+//				// print out formatted nucs (for now throws exception in getX,Y() if unformatted
+//				for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
+//					Nuc2D nuc = sstr.getNuc2DAt(nucID);
+//					if (nuc != null) {
+//						out.println("<point x=\"" + StringUtil.roundStrVal(nuc.getX(), 3) + 
+//							"\" y=\"" + StringUtil.roundStrVal(nuc.getY(), 3) + 
+//							"\" b=\"" + nuc.getNucChar() + "\" numbering-label=\"" + nucID + "\" />");
+//					}
+//				}
+//			}
+		}
+	}
+}
+
+
+@Override
+public void printComplexSVG(PrintWriter out, LinkedList<Nuc2D> nucleotides, double minX, double minY, double maxX, double maxY) throws Exception {
+	Vector
+		delineators = this.getItemListDelineators();
+	if (delineators != null && delineators.size() > 0) {
+		Nuc2D
+			startNuc = (Nuc2D)delineators.elementAt(0);
+		String
+			moleculeName = this.getName();
+		if (moleculeName == null) {
+			if (this instanceof RNABasePair2D) {
+				moleculeName = "RNABasePair_" + startNuc.getID();
+			}
+			/*
+			else if (this instanceof RNAComplexArea2D)
+				moleculeName = "RNAComplexArea_" + startNuc.getID();
+			*/
+			else if (this instanceof RNASubDomain2D) {
+				moleculeName = "RNASubDomain_" + startNuc.getID();
+			} else if (this instanceof RNAHelix2D) {
+				moleculeName = "RNAHelix_" + startNuc.getID();
+			} else if (this instanceof RNACycle2D) {
+				moleculeName = "RNACycle_" + startNuc.getID();
+			} else if (this instanceof RNAListNucs2D) {
+				moleculeName = "RNAListNucs_" + startNuc.getID();
+			} else if (this instanceof RNASingleStrand2D) {
+				moleculeName = "RNASingleStrand_" + startNuc.getID();
+			} else if (this instanceof RNAStackedHelix2D) {
+				moleculeName = "RNAStackedHelix_" + startNuc.getID();
+			} else if (this instanceof SSData2D) {
+				moleculeName = "SSData_" + startNuc.getID();
+			} else {
+				moleculeName = "Unknown type";
+			}
+		}
+		SSData2D
+			sstr = ((Nuc2D)delineators.elementAt(0)).getParentSSData2D();
+		if (sstr != null) {
+			for (int i = 1; i < delineators.size(); i += 2) {
+				Nuc2D
+					nuc0 = (Nuc2D)delineators.elementAt(i - 1),
+					nuc1 = (Nuc2D)delineators.elementAt(i);
+				int
+					nuc1ID = nuc1.getID();
+				for (int nucID = nuc0.getID(); nucID <= nuc1ID; nucID++) {
+					Nuc2D
+						nucOriginal = sstr.getNuc2DAt(nucID);
+					if (nucOriginal != null) {
+						Nuc2D
+							nucCopy = new Nuc2D(nucOriginal);
+						Vector
+							labelListOriginal = nucOriginal.getLabelList();
+						if (labelListOriginal != null) {
+							Vector
+								labelListCopy = new Vector();
+							for (Object labelObject : labelListOriginal) {
+								if (labelObject instanceof DrawStringObject) {
+									labelListCopy.add(new DrawStringObject((DrawStringObject)labelObject));
+								} else if (labelObject instanceof DrawLineObject) {
+									labelListCopy.add(new DrawLineObject((DrawLineObject)labelObject));
+								}
+							}
+							nucCopy.setLabelList(labelListCopy);
+						}
+						nucleotides.add(nucCopy);
+					}
+				}
+			}
+			nucleotides.sort((Nuc2D n0, Nuc2D n1) -> n0.getID() - n1.getID());
+			for (Nuc2D nuc : nucleotides) {
+				if (nuc.isBasePair()) {
+					nuc.setBasePair(nucleotides.get(nuc.getBasePairID() - 1));
+				}
+			}
+			this.reverseY(nucleotides);
+			minY = MAX_YCO - minY;
+			maxY = MAX_YCO - maxY;
+			double
+				temp = minY;
+			minY = maxY;
+			maxY = temp;
+			this.scaleEverything(nucleotides, minX, minY, maxX, maxY); //also scales font of nuc and labels
+			double
+				scalar = Math.min((MAX_XCO - MIN_XCO) / (maxX - minX), (MAX_YCO - MIN_YCO) / (maxY - minY));
+			minX *= scalar;
+			minY *= scalar;
+			maxX *= scalar;
+			maxY *= scalar;
+			this.ridNegatives(nucleotides, minX, minY);
+			double
+				dx = MIN_XCO - minX,
+				dy = MIN_YCO - minY;
+			minX += dx;
+			maxX += dx;
+			minY += dy;
+			maxY += dy;
+			this.centerEverything(nucleotides, maxX, maxY);
+			LinkedList<String>
+				letters = new LinkedList<String>(),
+				labelsLines = new LinkedList<String>(),
+				labelsText = new LinkedList<String>();
+			for (Nuc2D nuc : nucleotides) {
+				Font
+					nucFont = nuc.getFont();
+				FontMetrics
+					metrics = ComplexParentFrame.frame.getFontMetrics(nucFont);
 				double
 					nucX = nuc.getX(),
 					nucY = nuc.getY();
-				int 
-					pairID = nuc.getBasePairID();
-				if (pairID != 0 && pairID > nucID) {
-					Nuc2D 
-						pair = nuc.getBasePair2D();//sstr.getNuc2DAt(pairID);
-					if (nuc.inCanonicalBasePair()) {
-						double
-							dx = nuc.getFont().getSize() / 3.0,
-							dy = -nuc.getFont().getSize() / 3.0;
-						Point2D.Double a = new Point2D.Double(nuc.getX() + dx, nuc.getY() + dy), b = new Point2D.Double(pair.getX() + dx, pair.getY() + dy);;
-						Point2D 
-							p1 = new BLine2D(a, b).getPointAtT(RNABasePair.BP_LINE_MULT),
-							p2 = new BLine2D(b, a).getPointAtT(RNABasePair.BP_LINE_MULT);
-						labelsLines.add("<line fill=\"none\" stroke=\"black\" stroke-width=\"" + 0.2/*lineObj.getLineStroke().getLineWidth()*/ + "\" stroke-linejoin=\"round\" stroke-miterlimit=\"10\" x1=\"" +
-								StringUtil.roundStrVal(p1.getX(), 2) + "\" y1=\"" + StringUtil.roundStrVal(p1.getY(), 2) + "\" x2=\"" + StringUtil.roundStrVal(p2.getX(), 2) + "\" y2=\"" + StringUtil.roundStrVal(p2.getY(), 2) + "\"/>");
-					}
-				}
-				letters.add("<text id=\"" + nucID + "\" transform=\"matrix(1 0 0 1 " + StringUtil.roundStrVal(nucX, 2) + " " + StringUtil.roundStrVal(nucY, 2) + ")\" fill=\"black\" font-family=\"Myriad Pro\" font-weight=\"normal\" font-size=\"" + nuc.getFont().getSize() + "\">" + nuc.getNucChar() + "</text>");
-//				out.print("<text id=\"" + nucID + "\" transform=\"matrix(1 0 0 1 " + nuc.getX() + " " + nuc.getY() + ")\" fill=\"black\" font-family=\"Myriad Pro\" font-weight=\"normal\" font-size=\"" + nuc.getFont().getSize() + "\">" + nuc.getNucChar() + "</text>\n");
-				if (nuc.getLabelList() != null) {
-					for (Enumeration e = nuc.getLabelList().elements(); e.hasMoreElements();) {
-						DrawObject drawObject = (DrawObject)e.nextElement();
-						if (drawObject.getIsPickable()) {
-							if (drawObject instanceof DrawStringObject) {
-								DrawStringObject drawStringObject = (DrawStringObject)drawObject;
-								Font font = drawStringObject.getFont();
-
-								labelsText.add("<text transform=\"matrix(1 0 0 1 " + 
-										StringUtil.roundStrVal(drawStringObject.getX() + nucX, 2) + " " + 
-										StringUtil.roundStrVal(drawStringObject.getY() + nucY, 2) + ")\" fill=\"" + 
-										Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff) + "\" font-family=\"" + 
-										font.getFamily() + "\" font-size=\"" + font.getSize() + "\">" + 
-										drawStringObject.getDrawString() + "</text>");
-							} else if (drawObject instanceof DrawLineObject) {
-								DrawLineObject lineObj = (DrawLineObject)drawObject;
-								BLine2D
-									bline2D = lineObj.getBLine2D();
-								Point2D
-									p1 = bline2D.getP1(),
-									p2 = bline2D.getP2();
-								labelsLines.add("<line fill=\"none\" stroke=\"black\" stroke-width=\"" + lineObj.getLineStroke().getLineWidth() + "\" stroke-linejoin=\"round\" stroke-miterlimit=\"10\" x1=\"" +
-//										labelsLines.add("<line fill=\"none\" stroke=\"" + lineObj.getLineStroke()*/ + "\" stroke-width=\"" + lineObj.getLineStroke().getLineWidth() + "\" stroke-linejoin=\"round\" stroke-miterlimit=\"10\" x1=\"" +
-									StringUtil.roundStrVal(p1.getX() + nucX + 7, 2) + "\" y1=\"" + StringUtil.roundStrVal(p1.getY() + nucY - 5, 2) + "\" x2=\"" + StringUtil.roundStrVal(p2.getX() + nucX + 7, 2) + "\" y2=\"" + StringUtil.roundStrVal(p2.getY() + nucY - 5, 2) + "\"/>");
-							} else { }
-//							out.print(output); 
+				letters.add("<text id=\"" + nuc.getID() + "\" transform=\"matrix(1 0 0 1 " + StringUtil.roundStrVal(nucX, 2) + " " + StringUtil.roundStrVal(nucY, 2) + ")\" fill=\"black\" font-family=\"" + nucFont.getFamily() + "\" font-weight=\"normal\" font-size=\"" + nucFont.getSize() + "\">" + nuc.getNucChar() + "</text>");
+				dx = metrics.charWidth(nuc.getNucChar()) / 2d;
+				dy = -nucFont.getSize2D() / 2d;
+				Vector
+					labelList = nuc.getLabelList();
+				if (labelList != null) {
+					int
+						labelListSize = labelList.size();
+					for (int i = 1; i < labelListSize;) {
+						DrawLineObject
+							drawLineObject = (DrawLineObject)labelList.get(i - 1);
+						if (drawLineObject.getIsPickable()) {
+							BLine2D
+								bLine2D = drawLineObject.getBLine2D();
+							Point2D
+								p0 = bLine2D.getP1(),
+								p1 = bLine2D.getP2();
+							labelsLines.add("<line fill=\"none\" stroke=\"black\" stroke-width=\"" + drawLineObject.getLineStroke().getLineWidth() + "\" stroke-linejoin=\"round\" stroke-miterlimit=\"10\" x1=\"" + StringUtil.roundStrVal(nucX + dx + p0.getX(), 2) + "\" y1=\"" + StringUtil.roundStrVal(nucY + dy + p0.getY(), 2) + "\" x2=\"" + StringUtil.roundStrVal(nucX + dx + p1.getX(), 2) + "\" y2=\"" + StringUtil.roundStrVal(nucY + dy + p1.getY(), 2) + "\"/>");
+						}
+						Object
+							labelObject = labelList.get(i);
+						if (labelObject instanceof DrawStringObject) {
+							DrawStringObject
+								drawStringObject = (DrawStringObject)labelObject;
+							if (drawStringObject.getIsPickable()) {
+								Font
+									labelFont = drawStringObject.getFont();
+								FontMetrics
+									labelMetrics = ComplexParentFrame.frame.getFontMetrics(labelFont);
+								String
+									label = drawStringObject.getDrawString();
+								dx = -labelMetrics.stringWidth(label) / 2d / 1.25d;
+								labelsText.add("<text transform=\"matrix(1 0 0 1 " + StringUtil.roundStrVal(nucX + drawStringObject.getX() + dx, 2) + " " + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + ")\" fill=\"" + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff) + "\" font-family=\"" + labelFont.getFamily() + "\" font-size=\"" + labelFont.getSize() + "\">" + label + "</text>");
+							}
+							i += 2;
+						} else {
+							i++;
 						}
 					}
-//					System.out.println(nuc.getLabelList());
 				}
 			}
+			out.println("<g id=\"Letters\">");
+			for (String letter : letters) {
+				out.println("\t" + letter);
+			}
+			out.println("</g>");
+			out.println("<g id=\"Labels_Lines\">");
+			for (String labelLine : labelsLines) {
+				out.println("\t" + labelLine);
+			}
+			out.println("</g>");
+			out.println("<g id=\"Labels_Text\">");
+			for (String labelText : labelsText) {
+				out.println("\t" + labelText);
+			}
+			out.println("</g>");
 		}
 	}
-	out.println("<g id=\"Labels_Lines\">");
-	for (String labelsLinesI : labelsLines) { out.println(labelsLinesI); }
-	out.println("</g>");
-	out.println("<g id=\"Labels_Text\">");
-	for (String labelsTextI : labelsText) { out.println(labelsTextI); }
-	out.println("</g>");
-	out.println("<g id=\"Letters\">");
-	for (String lettersI : letters) { out.println(lettersI); }
-	out.println("</g>");
-	out.println("<g id=\"Circles\">");
-	for (String circlesI : circles) { out.println(circlesI); }
-	out.println("</g>");
 }
+
 
 public void scaleCSV() throws Exception {
 	double maxY = 0;
@@ -2455,24 +2267,64 @@ public void scaleCSV() throws Exception {
 	}
 }
 
-public void scaleCSV(double minX, double minY, double maxX, double maxY) throws Exception {
-	double newY = 0;
-	double newX = 0;
-	//double newLX
-	
-	float fontSize = 0;
-	
-	double rangeXP = MAX_XCO - MIN_XCO;
-	double rangeYP = MAX_YCO - MIN_YCO;
-	
-	double rx = maxX - minX;
-	double ry = maxY - minY;
+public void scaleEverything(LinkedList<Nuc2D> nucleotides, double minX, double minY, double maxX, double maxY) throws Exception {
+	double
+		scalar = Math.min((MAX_XCO - MIN_XCO) / (maxX - minX), (MAX_YCO - MIN_YCO) / (maxY - minY));
+	for (Nuc2D nuc : nucleotides) {
+		nuc.setX(nuc.getX() * scalar);
+		nuc.setY(nuc.getY() * scalar);
+		Font
+			font = nuc.getFont();
+		nuc.setFont(new Font(font.getName(), font.getStyle(), (int)Math.round(font.getSize() * scalar)));
+		Vector
+			labelList = nuc.getLabelList();
+		if (labelList != null) {
+			int
+				labelListSize = labelList.size();
+			for (int i = 0; i < labelListSize; i++) {
+				Object
+					drawObject = labelList.get(i);
+				if (drawObject instanceof DrawStringObject) {
+					DrawStringObject
+						drawStringObject = (DrawStringObject)drawObject;
+					Font
+						drawFont = drawStringObject.getFont();
+					drawStringObject.setX(drawStringObject.getX() * scalar);
+					drawStringObject.setY(drawStringObject.getY() * scalar);
+					
+					drawStringObject.setFont(new Font(font.getName(), font.getStyle(), (int)(drawFont.getSize() * scalar)));
+				} else if (drawObject instanceof DrawLineObject) {
+					DrawLineObject
+						lineObj = (DrawLineObject)drawObject;
+					BLine2D
+						bLine2D = lineObj.getBLine2D();
+					Point2D
+						p0 = bLine2D.getP1(),
+						p1 = bLine2D.getP2();
+					lineObj.reset(p0.getX() * scalar, p0.getY() * scalar, p1.getX() * scalar, p1.getY() * scalar);
+				}
+			}
+		}
+	}
+}
+
+public void scaleEverything(double minX, double minY, double maxX, double maxY) throws Exception {
+	float
+		fontSize = 0f;
+	double
+		rangeXP = MAX_XCO - MIN_XCO,
+		rangeYP = MAX_YCO - MIN_YCO,
+		rx = maxX - minX,
+		ry = maxY - minY,
+		newX = 0d,
+		newY = 0d;
 	
 	//scalling up
 	if ((rx < rangeXP) && (ry < rangeYP)) {
-		double scaleX = rangeXP/rx;
-		double scaleY = rangeYP/ry;
-		double scale = 0;
+		double
+			scaleX = rangeXP/rx,
+			scaleY = rangeYP/ry,
+			scale = 0d;
 		
 		//scale up by the smallest scale, either x or y
 		scale = scaleX < scaleY ? scaleX : scaleY;
@@ -2560,39 +2412,47 @@ public void scaleCSV(double minX, double minY, double maxX, double maxY) throws 
 	}
 }
 
-public void ridNegatives(double minX, double minY, double maxX, double maxY) throws Exception {
-	if (minX < MIN_XCO) {
-		double shiftX = MIN_XCO - minX;
-		this.shiftAllX(shiftX);
+public void ridNegatives(LinkedList<Nuc2D> nucleotides, double minX, double minY) throws Exception {
+	double
+		dx = MIN_XCO - minX,
+		dy = MIN_YCO - minY;
+	for (Nuc2D nuc : nucleotides) {
+		nuc.setX(nuc.getX() + dx);
+		nuc.setY(nuc.getY() + dy);
 	}
-	else if (minX > MIN_XCO) {
-		double shiftX = MIN_XCO - minX;
-		this.shiftAllX(shiftX);
-	}
-	if (minY < MIN_YCO) {
-		double shiftY = MIN_YCO - minY;
-		this.shiftAllY(shiftY);
-	}
-	else if (minY > MIN_YCO) {
-		double shiftY = MIN_YCO - minY;
-		this.shiftAllY(shiftY);
-	}
-	
-	/* TESTING BOUNDARIES
-	minY = this.getSmallestYVal();
-	minX = this.getSmallestXVal();
-	maxY = this.getLargestYVal();
-	maxX = this.getLargestXVal();
-	System.out.println("ridNegatives()");
-	System.out.println("MinX: " + minX);
-	System.out.println("MaxX: " + maxX);
-	System.out.println("MinY: " + minY);
-	System.out.println("MaxY: " + maxY);
-	System.out.println();
-	*/
 }
 
-public void centerEverything(double minX, double minY, double maxX, double maxY) throws Exception {
+public void ridNegatives(double minX, double minY) throws Exception {
+	if (minX != MIN_XCO) {
+		double
+			shiftX = MIN_XCO - minX;
+		this.shiftAllX(shiftX);
+	}
+	if (minY != MIN_YCO) {
+		double
+			shiftY = MIN_YCO - minY;
+		this.shiftAllY(shiftY);
+	}
+}
+
+public void centerEverything(LinkedList<Nuc2D> nucleotides, double maxX, double maxY) throws Exception {
+	if (maxX < MAX_XCO) {
+		double
+			dx = (MAX_XCO - maxX) / 2d;
+		for (Nuc2D nuc : nucleotides) {
+			nuc.setX(nuc.getX() + dx);
+		}
+	}
+	if (maxY < MAX_YCO) {
+		double
+			dy = (MAX_YCO - maxY) / 2d;
+		for (Nuc2D nuc : nucleotides) {
+			nuc.setY(nuc.getY() + dy);
+		}
+	}
+}
+
+public void centerEverything(double maxX, double maxY) throws Exception {
 	if (maxX < MAX_XCO) {
 		double shiftX = (MAX_XCO-maxX)/2;
 		shiftAllX(shiftX);
@@ -2601,39 +2461,57 @@ public void centerEverything(double minX, double minY, double maxX, double maxY)
 		double shiftY = (MAX_YCO-maxY)/2;
 		shiftAllY(shiftY);
 	}
-	
-	/* TESTING BOUNDARIES
-	minY = this.getSmallestYVal();
-	minX = this.getSmallestXVal();
-	maxY = this.getLargestYVal();
-	maxX = this.getLargestXVal();
-	System.out.println("Center()");
-	System.out.println("MinX: " + minX);
-	System.out.println("MaxX: " + maxX);
-	System.out.println("MinY: " + minY);
-	System.out.println("MaxY: " + maxY);
-	System.out.println();
-	*/
 }
+
+public void reverseY(LinkedList<Nuc2D> nucleotides) throws Exception {
+	for (Nuc2D nuc : nucleotides) {
+		nuc.setY(MAX_YCO - nuc.getY());
+		Vector
+			labelList = nuc.getLabelList();
+		if (labelList != null) {
+			int
+				labelListSize = labelList.size();
+			for (int i = 0; i < labelListSize; i++) {
+				Object
+					drawObject = labelList.get(i);
+				if (drawObject instanceof DrawStringObject) {
+					DrawStringObject
+						drawStringObject = (DrawStringObject)drawObject;
+					drawStringObject.setY(-drawStringObject.getY());
+				} else if (drawObject instanceof DrawLineObject) {
+					DrawLineObject
+						lineObject = (DrawLineObject)drawObject;
+					BLine2D
+						bLine2D = lineObject.getBLine2D();
+					Point2D
+						p0 = bLine2D.getP1(),
+						p1 = bLine2D.getP2();
+					lineObject.reset(p0.getX(), -p0.getY(), p1.getX(), -p1.getY());
+				}
+			}
+		}
+	}
+}
+
 //images come out upsidedown so we reverse y to fix it
 //y max coordinate is 756
 public void
 reverseY()
 throws Exception {
-	Vector nucList = this.getItemListDelineators();
-	double newY = 0;
+	Vector
+		nucList = this.getItemListDelineators();
 	SSData2D sstr = ((Nuc2D)((NucNode)nucList.elementAt(0))).getParentSSData2D();
 	
-	for (int i = 0;i < nucList.size();i+=2)
+	for (int i = 1; i < nucList.size(); i+=2)
 	{
-		Nuc2D nuc0 = (Nuc2D)((NucNode)nucList.elementAt(i));
-		Nuc2D nuc1 = (Nuc2D)((NucNode)nucList.elementAt(i+1));
-
-		for (int nucID = nuc0.getID();nucID <= nuc1.getID();nucID++)
+		Nuc2D
+			nuc0 = (Nuc2D)((NucNode)nucList.elementAt(i - 1)),
+			nuc1 = (Nuc2D)((NucNode)nucList.elementAt(i));
+		for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++)
 		{
-			Nuc2D refNuc = sstr.getNuc2DAt(nucID);
-			newY = MAX_YCO - refNuc.getY();
-			refNuc.setY(newY);
+			Nuc2D
+				refNuc = sstr.getNuc2DAt(nucID);
+			refNuc.setY(MAX_YCO - refNuc.getY());
 			refNuc.callAdjustLabelListCSV(2, 0, 0, 0);
 			
 		}

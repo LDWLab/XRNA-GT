@@ -5,8 +5,6 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
 import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.Vector;
@@ -15,6 +13,7 @@ import jimage.DrawCircleObject;
 import jimage.DrawObject;
 import util.PostScriptUtil;
 import util.StringUtil;
+import util.Tuple4;
 import util.math.BLine2D;
 import util.math.BRectangle2D;
 
@@ -343,22 +342,10 @@ throws Exception
 {
 	PrintWriter out = (PrintWriter)outFile;	
 	out.println("resNum,unModResName,X,Y,resColor,FontSize,LineX1,LineY1,LineX2,LineY2,LineThickness,LineColor,LabelX,LabelY,LabelSymbol,LabelFontSize,LabelColor");
-	Object complexList = null;
-	double
-		minX = Double.MAX_VALUE,
-		minY = Double.MAX_VALUE,
-		maxX = -Double.MAX_VALUE,
-		maxY = -Double.MAX_VALUE;
-	for (int complexItemID = 0; complexItemID < this.getItemCount(); complexItemID++) {
-		NucCollection2D nucCol2D = (NucCollection2D)this.getItemAt(complexItemID);
-		double temp;
-		if ((temp = nucCol2D.getSmallestXVal()) < minX) { minX = temp; }
-		if ((temp = nucCol2D.getSmallestYVal()) < minY) { minY = temp; }
-		if ((temp = nucCol2D.getLargestXVal()) > maxX) { maxX = temp; }
-		if ((temp = nucCol2D.getLargestYVal()) > maxY) { maxY = temp; }
-	}
+	Tuple4<Double, Double, Double, Double>
+		bounds = this.bounds();
 	for(int complexItemID = 0;complexItemID < this.getItemCount();complexItemID++) {
-		((ComplexCollection)this.getItemAt(complexItemID)).printComplexCSV(out);
+		((NucCollection2D)this.getItemAt(complexItemID)).printComplexCSV(out, new LinkedList<>(), bounds.t0, bounds.t1, bounds.t2, bounds.t3);
 	}
 }
 
@@ -366,118 +353,164 @@ throws Exception
 public void printComplexTR(PrintWriter outFile) throws Exception {
 	PrintWriter out = (PrintWriter) outFile;
 	out.println("<structure>");
-	double
-		minX = Double.MAX_VALUE,
-		minY = Double.MAX_VALUE,
-		maxX = -Double.MAX_VALUE,
-		maxY = -Double.MAX_VALUE;
+	Tuple4<Double, Double, Double, Double>
+		bounds = this.bounds();
 	for (int complexItemID = 0; complexItemID < this.getItemCount(); complexItemID++) {
-		NucCollection2D nucCol2D = (NucCollection2D)this.getItemAt(complexItemID);
-		double temp;
-		if ((temp = nucCol2D.getSmallestXVal()) < minX) { minX = temp; }
-		if ((temp = nucCol2D.getSmallestYVal()) < minY) { minY = temp; }
-		if ((temp = nucCol2D.getLargestXVal()) > maxX) { maxX = temp; }
-		if ((temp = nucCol2D.getLargestYVal()) > maxY) { maxY = temp; }
-	}
-	for (int complexItemID = 0; complexItemID < this.getItemCount(); complexItemID++) {
-		((ComplexCollection)this.getItemAt(complexItemID)).printComplexTR(out, minX, minY, maxX, maxY);
+		((ComplexCollection)this.getItemAt(complexItemID)).printComplexTR(out, new LinkedList<>(), bounds.t0, bounds.t1, bounds.t2, bounds.t3);
 	}
 	out.println("</structure>");
 }
 
 @Override
 public void printComplexSVG(PrintWriter outFile) throws Exception {
-	PrintWriter out = (PrintWriter) outFile;
-	out.println("<?xml version='1.0' encoding='UTF-8'?>\n<svg version=\"1.1\" baseProfile=\"basic\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"0px\" y=\"0px\" width=\"612px\" height=\"792px\" viewBox=\"0 0 612 792\" xml:space=\"preserve\">");
-	double 
-		minX = Double.MAX_VALUE,
-		minY = Double.MAX_VALUE,
-		maxX = -Double.MAX_VALUE,
-		maxY = -Double.MAX_VALUE;
+	outFile.println("<?xml version='1.0' encoding='UTF-8'?>\n<svg version=\"1.1\" baseProfile=\"basic\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"0px\" y=\"0px\" width=\"612px\" height=\"792px\" viewBox=\"0 0 612 792\" xml:space=\"preserve\">");
+	Tuple4<Double, Double, Double, Double>
+		bounds = this.bounds();
+	double
+		minX = bounds.t0,
+		minY = bounds.t1,
+		maxX = bounds.t2,
+		maxY = bounds.t3;
+	LinkedList<LinkedList<Nuc2D>>
+		allNucleotides = new LinkedList<>();
 	for (int complexItemID = 0; complexItemID < this.getItemCount(); complexItemID++) {
-		NucCollection2D nucCol2D = (NucCollection2D)this.getItemAt(complexItemID);
-		double temp;
-		if ((temp = nucCol2D.getSmallestXVal()) < minX) { minX = temp; }
-		if ((temp = nucCol2D.getSmallestYVal()) < minY) { minY = temp; }
-		if ((temp = nucCol2D.getLargestXVal()) > maxX) { maxX = temp; }
-		if ((temp = nucCol2D.getLargestYVal()) > maxY) { maxY = temp; }
-	}
-	for (int complexItemID = 0; complexItemID < this.getItemCount(); complexItemID++) {
-		((ComplexCollection)this.getItemAt(complexItemID)).printComplexSVG(out, minX, minY, maxX, maxY);
+		LinkedList<Nuc2D>
+			nucleotides = new LinkedList<>();
+		((ComplexCollection)this.getItemAt(complexItemID)).printComplexSVG(outFile, nucleotides, minX, minY, maxX, maxY);
+		allNucleotides.add(nucleotides);
 	}
 	LinkedList<String>
 		nucleotideLines = new LinkedList<>(),
 		nucleotideCircles = new LinkedList<>();
-	for (int complexItemID = 0; complexItemID < this.getItemCount(); complexItemID++) {
-		nucleotideLines.add("<g id=\"Nucleotide_Lines" + complexItemID + "\">");
-		nucleotideCircles.add("<g id=\"Nucleotide_Circles" + complexItemID + "\">");
-		Vector
-			delineators = ((NucCollection2D)this.getItemAt(complexItemID)).getItemListDelineators();
-		if (delineators != null) {
-			SSData2D
-				sstr = ((Nuc2D)((NucNode)delineators.elementAt(0))).getParentSSData2D();
-			for (int i = 0; i < delineators.size(); i += 2) {
-				Nuc2D 
-					nuc0 = (Nuc2D)delineators.elementAt(i),
-					nuc1 = (Nuc2D)delineators.elementAt(i + 1);
-				for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
-					Nuc2D
-						nuc = sstr.getNuc2DAt(nucID);
-					if (nuc != null) {
-						int pairID = nuc.getBasePairID();
-						if (pairID != 0 && pairID > nucID) {
-							Nuc2D
-								pair = nuc.getBasePair2D();
-							double
-								dx = nuc.getFont().getSize() / 3.0,
-								dy = -nuc.getFont().getSize() / 3.0;
-							if (nuc.inCanonicalBasePair()) {
-								Point2D.Double 
-									a = new Point2D.Double(nuc.getX() + dx, nuc.getY() + dy), 
-									b = new Point2D.Double(pair.getX() + dx, pair.getY() + dy);
-								Point2D 
-									p1 = new BLine2D(a, b).getPointAtT(RNABasePair.BP_LINE_MULT),
-									p2 = new BLine2D(b, a).getPointAtT(RNABasePair.BP_LINE_MULT);
-								out.println("\t<line fill=\"none\" stroke=\"black\" stroke-width=\"" + 0.2/*lineObj.getLineStroke().getLineWidth()*/ + "\" stroke-linejoin=\"round\" stroke-miterlimit=\"10\" x1=\"" +
-										StringUtil.roundStrVal(p1.getX(), 2) + "\" y1=\"" + StringUtil.roundStrVal(p1.getY(), 2) + "\" x2=\"" + StringUtil.roundStrVal(p2.getX(), 2) + "\" y2=\"" + StringUtil.roundStrVal(p2.getY(), 2) + "\"/>");
-							} else if (nuc.inWobbleBasePair()) {
-								Point2D.Double
-									a = new Point2D.Double(nuc.getX() + dx * 1.1d, nuc.getY() + dy), 
-									b = new Point2D.Double(pair.getX() + dx * 1.1d, pair.getY() + dy),
-									center = new Point2D.Double((a.getX() + b.getX()) / 2d, (a.getY() + b.getY()) / 2d);
-								DrawCircleObject
-									circle = nuc.getDrawCircleObject();
-								double
-									radius = (circle == null ? nuc.getFont().getSize2D() / 3f : circle.getRadius()) * 0.5d;
-								out.println("\t<circle cx=\"" + center.x + "\" cy=\"" + center.y + "\" r=\"" + radius + "\" fill=\"black\"/>");
-							} else if (nuc.inMisMatchBasePair()) {
-								Point2D.Double
-									a = new Point2D.Double(nuc.getX() + dx * 1.1d, nuc.getY() + dy), 
-									b = new Point2D.Double(pair.getX() + dx * 1.1d, pair.getY() + dy),
-									center = new Point2D.Double((a.getX() + b.getX()) / 2d, (a.getY() + b.getY()) / 2d);
-								DrawCircleObject
-									circle = nuc.getDrawCircleObject();
-								double
-									radius = (circle == null ? nuc.getFont().getSize2D() / 3d : circle.getRadius()) * 0.5d;
-								out.println("\t<circle cx=\"" + center.x + "\" cy=\"" + center.y + "\" r=\"" + radius + "\" stroke=\"black\" fill-opacity=\"0.0\" stroke-width=\"" + (radius / 10d) + "\"/>");
-							}
-						}
-					}
+	for (LinkedList<Nuc2D> nucleotides : allNucleotides) {
+		for (Nuc2D nuc : nucleotides) {
+			int
+				nucID = nuc.getID(),
+				pairID = nuc.getBasePairID();
+			if (pairID != 0 && pairID > nucID) {
+				Nuc2D
+					pair = nuc.getBasePair2D();
+				double
+					dx = nuc.getFont().getSize() / 3.0,
+					dy = -nuc.getFont().getSize() / 3.0;
+				if (nuc.inCanonicalBasePair()) {
+					Point2D.Double 
+						a = new Point2D.Double(nuc.getX() + dx, nuc.getY() + dy), 
+						b = new Point2D.Double(pair.getX() + dx, pair.getY() + dy);
+					Point2D 
+						p1 = new BLine2D(a, b).getPointAtT(RNABasePair.BP_LINE_MULT),
+						p2 = new BLine2D(b, a).getPointAtT(RNABasePair.BP_LINE_MULT);
+					nucleotideLines.add("<line fill=\"none\" stroke=\"black\" stroke-width=\"" + 0.2/*lineObj.getLineStroke().getLineWidth()*/ + "\" stroke-linejoin=\"round\" stroke-miterlimit=\"10\" x1=\"" + StringUtil.roundStrVal(p1.getX(), 2) + "\" y1=\"" + StringUtil.roundStrVal(p1.getY(), 2) + "\" x2=\"" + StringUtil.roundStrVal(p2.getX(), 2) + "\" y2=\"" + StringUtil.roundStrVal(p2.getY(), 2) + "\"/>");
+				} else if (nuc.inWobbleBasePair()) {
+					Point2D.Double
+						a = new Point2D.Double(nuc.getX() + dx * 1.1d, nuc.getY() + dy), 
+						b = new Point2D.Double(pair.getX() + dx * 1.1d, pair.getY() + dy),
+						center = new Point2D.Double((a.getX() + b.getX()) / 2d, (a.getY() + b.getY()) / 2d);
+					DrawCircleObject
+						circle = nuc.getDrawCircleObject();
+					double
+						radius = (circle == null ? nuc.getFont().getSize2D() / 3f : circle.getRadius()) * 0.5d;
+					nucleotideCircles.add("<circle cx=\"" + center.x + "\" cy=\"" + center.y + "\" r=\"" + radius + "\" fill=\"black\"/>");
+				} else if (nuc.inMisMatchBasePair()) {
+					Point2D.Double
+						a = new Point2D.Double(nuc.getX() + dx * 1.1d, nuc.getY() + dy), 
+						b = new Point2D.Double(pair.getX() + dx * 1.1d, pair.getY() + dy),
+						center = new Point2D.Double((a.getX() + b.getX()) / 2d, (a.getY() + b.getY()) / 2d);
+					DrawCircleObject
+						circle = nuc.getDrawCircleObject();
+					double
+						radius = (circle == null ? nuc.getFont().getSize2D() / 3d : circle.getRadius()) * 0.5d;
+					nucleotideCircles.add("<circle cx=\"" + center.x + "\" cy=\"" + center.y + "\" r=\"" + radius + "\" stroke=\"black\" fill-opacity=\"0.0\" stroke-width=\"" + (radius / 10d) + "\"/>");
 				}
 			}
 		}
-		nucleotideLines.add("</g>");
-		nucleotideCircles.add("</g>");
 	}
+	outFile.println("<g id=\"Nucleotide_Lines\">");
 	for (String nucleotideLine : nucleotideLines) {
-		out.println(nucleotideLine);
+		outFile.println("\t" + nucleotideLine);
 	}
+	outFile.println("</g>");
+	outFile.println("<g id=\"Nucleotide_Circles\">");
 	for (String nucleotideCircle : nucleotideCircles) {
-		out.println(nucleotideCircle);
+		outFile.println("\t" + nucleotideCircle);
 	}
-	out.print("<g id=\"WaterMark\">\n"
-			+ "<text id=\"Watermark\" transform=\"matrix(1 0 0 1 8.738 760.145)\" fil=\"black\" font-family=\"Myriad Pro\" font-size=\"10\">A 3D-based secondary structure, generated by RiboVision.</text>\n"
-			+ "<text id=\"Date\" transform=\"matrix(1 0 0 1 83.738 775.145)\" fill=\"black\" font-family=\"Myriad Pro\" font-size=\"8\">Saved on " + new SimpleDateFormat("MM/dd/yyyy HH:mm:ss").format(new Date()) + "</text>\n</g>\n</svg>");
+	outFile.println("</g>");
+	outFile.println("</svg>");
+//	LinkedList<String>
+//		nucleotideLines = new LinkedList<>(),
+//		nucleotideCircles = new LinkedList<>();
+//	for (int complexItemID = 0; complexItemID < this.getItemCount(); complexItemID++) {
+//		nucleotideLines.add("<g id=\"Nucleotide_Lines" + complexItemID + "\">");
+//		nucleotideCircles.add("<g id=\"Nucleotide_Circles" + complexItemID + "\">");
+//		Vector
+//			delineators = ((NucCollection2D)this.getItemAt(complexItemID)).getItemListDelineators();
+//		if (delineators != null) {
+//			SSData2D
+//				sstr = ((Nuc2D)((NucNode)delineators.elementAt(0))).getParentSSData2D();
+//			for (int i = 0; i < delineators.size(); i += 2) {
+//				Nuc2D 
+//					nuc0 = (Nuc2D)delineators.elementAt(i),
+//					nuc1 = (Nuc2D)delineators.elementAt(i + 1);
+//				for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
+//					Nuc2D
+//						nuc = sstr.getNuc2DAt(nucID);
+//					if (nuc != null) {
+//						int
+//							pairID = nuc.getBasePairID();
+//						if (pairID != 0 && pairID > nucID) {
+//							Nuc2D
+//								pair = nuc.getBasePair2D();
+//							double
+//								dx = nuc.getFont().getSize() / 3.0,
+//								dy = -nuc.getFont().getSize() / 3.0;
+//							if (nuc.inCanonicalBasePair()) {
+//								Point2D.Double 
+//									a = new Point2D.Double(nuc.getX() + dx, nuc.getY() + dy), 
+//									b = new Point2D.Double(pair.getX() + dx, pair.getY() + dy);
+//								Point2D 
+//									p1 = new BLine2D(a, b).getPointAtT(RNABasePair.BP_LINE_MULT),
+//									p2 = new BLine2D(b, a).getPointAtT(RNABasePair.BP_LINE_MULT);
+//								nucleotideLines.add("\t<line fill=\"none\" stroke=\"black\" stroke-width=\"" + 0.2/*lineObj.getLineStroke().getLineWidth()*/ + "\" stroke-linejoin=\"round\" stroke-miterlimit=\"10\" x1=\"" +
+//										StringUtil.roundStrVal(p1.getX(), 2) + "\" y1=\"" + StringUtil.roundStrVal(p1.getY(), 2) + "\" x2=\"" + StringUtil.roundStrVal(p2.getX(), 2) + "\" y2=\"" + StringUtil.roundStrVal(p2.getY(), 2) + "\"/>");
+//							} else if (nuc.inWobbleBasePair()) {
+//								Point2D.Double
+//									a = new Point2D.Double(nuc.getX() + dx * 1.1d, nuc.getY() + dy), 
+//									b = new Point2D.Double(pair.getX() + dx * 1.1d, pair.getY() + dy),
+//									center = new Point2D.Double((a.getX() + b.getX()) / 2d, (a.getY() + b.getY()) / 2d);
+//								DrawCircleObject
+//									circle = nuc.getDrawCircleObject();
+//								double
+//									radius = (circle == null ? nuc.getFont().getSize2D() / 3f : circle.getRadius()) * 0.5d;
+//								nucleotideCircles.add("\t<circle cx=\"" + center.x + "\" cy=\"" + center.y + "\" r=\"" + radius + "\" fill=\"black\"/>");
+//							} else if (nuc.inMisMatchBasePair()) {
+//								Point2D.Double
+//									a = new Point2D.Double(nuc.getX() + dx * 1.1d, nuc.getY() + dy), 
+//									b = new Point2D.Double(pair.getX() + dx * 1.1d, pair.getY() + dy),
+//									center = new Point2D.Double((a.getX() + b.getX()) / 2d, (a.getY() + b.getY()) / 2d);
+//								DrawCircleObject
+//									circle = nuc.getDrawCircleObject();
+//								double
+//									radius = (circle == null ? nuc.getFont().getSize2D() / 3d : circle.getRadius()) * 0.5d;
+//								nucleotideCircles.add("\t<circle cx=\"" + center.x + "\" cy=\"" + center.y + "\" r=\"" + radius + "\" stroke=\"black\" fill-opacity=\"0.0\" stroke-width=\"" + (radius / 10d) + "\"/>");
+//							}
+//						}
+//					}
+//				}
+//			}
+//		}
+//		nucleotideLines.add("</g>");
+//		nucleotideCircles.add("</g>");
+//	}
+//	for (String nucleotideLine : nucleotideLines) {
+//		out.println(nucleotideLine);
+//	}
+//	for (String nucleotideCircle : nucleotideCircles) {
+//		out.println(nucleotideCircle);
+//	}
+//	out.print("<g id=\"WaterMark\">\n"
+//			+ "<text id=\"Watermark\" transform=\"matrix(1 0 0 1 8.738 760.145)\" fil=\"black\" font-family=\"Myriad Pro\" font-size=\"10\">A 3D-based secondary structure, generated by RiboVision.</text>\n"
+//			+ "<text id=\"Date\" transform=\"matrix(1 0 0 1 83.738 775.145)\" fill=\"black\" font-family=\"Myriad Pro\" font-size=\"8\">Saved on " + new SimpleDateFormat("MM/dd/yyyy HH:mm:ss").format(new Date()) + "</text>\n</g>\n");
+//	out.println("</svg>");
 }
 
 public ComplexScene2D

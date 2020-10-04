@@ -49,10 +49,10 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Vector;
+import java.util.function.Function;
 
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
@@ -95,6 +95,10 @@ import jimage.FontChooser;
 import jimage.GenFileFilter;
 import jimage.HexColorChooserPanel;
 import jimage.ViewImgCanvas;
+import util.Tuple2;
+import util.Tuple3;
+import util.Tuple4;
+import util.Tuple5;
 
 public class ComplexSceneView extends DrawObjectView implements Printable, AdjustmentListener {
 
@@ -2006,7 +2010,8 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			labelLines = new ArrayList<>();
 		private ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>>
 			letters = new ArrayList<>(),
-			helixLabels = new ArrayList<>(), labels = new ArrayList<>();
+			helixLabels = new ArrayList<>(),
+			labels = new ArrayList<>();
 		private float
 			minimumScale = 0.75f,
 			maximumScale = 8.0f,
@@ -2020,8 +2025,8 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 
 		private SVGToXRNAParser() throws Exception {
 			File
-				temporaryInput = new File(getCurrentInputFile().getParentFile() + "\\temporary_input.svg"),//File.createTempFile("temp_input", ".svg"),
-				temporaryXrna = new File(getCurrentInputFile().getParentFile() + "\\temp_.xrna");//File.createTempFile("temp", ".xrna");
+				temporaryInput = /*new File(getCurrentInputFile().getParentFile() + "\\temporary_input.svg"),*/File.createTempFile("temp_input", ".svg"),
+				temporaryXrna = /*new File(getCurrentInputFile().getParentFile() + "\\temp_.xrna");*/File.createTempFile("temp", ".xrna");
 			temporaryInput.deleteOnExit();
 	        temporaryXrna.deleteOnExit();
 	        LinkedList<String>
@@ -2048,11 +2053,11 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 	        } catch (Exception ex) {
 	        	ex.printStackTrace();
 	        }
-	        try (BufferedReader reader = new BufferedReader(new FileReader(temporaryInput)); PrintWriter writer = new PrintWriter(new FileWriter(new File("C:\\Users\\caede\\Desktop\\temporaryInputCache.svg")))) {
-	        	for (String line = reader.readLine(); line != null; line = reader.readLine()) {
-	        		writer.println(line);
-	        	}
-	        }
+//	        try (BufferedReader reader = new BufferedReader(new FileReader(temporaryInput)); PrintWriter writer = new PrintWriter(new FileWriter(new File("C:\\Users\\caede\\Desktop\\temporaryInputCache.svg")))) {
+//	        	for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+//	        		writer.println(line);
+//	        	}
+//	        }
 			try (BufferedReader reader = new BufferedReader(new FileReader(temporaryInput)); PrintWriter writer = new PrintWriter(new FileWriter(temporaryXrna))) {
 				boolean
 					nonstandardSVGFormat = true;
@@ -2132,9 +2137,9 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 								x = Float.parseFloat(this.boundedSubstring(line, "x=\"", "\"")),
 								y = Float.parseFloat(this.boundedSubstring(line, "y=\"", "\""));
 							String
-								label = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<").strip();
+								label = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<").trim();
 							float
-								width = (float) metrics.stringWidth(label);
+								width = (float)metrics.stringWidth(label);
 							this.labels.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(label, new Rectangle2D.Float(x - width / 2.0f, y - fontSize, width, fontSize), font, null));
 						} /*else if (line.contains("title")) {
 							System.out.println("line: " + line);
@@ -2160,7 +2165,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 								y = Float.parseFloat(this.boundedSubstring(line, "y=\"", "\""));
 							}
 							String
-								letter = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<").strip();//letter = this.boundedSubstring(line, ">", "<").strip();
+								letter = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<").trim();//letter = this.boundedSubstring(line, ">", "<").strip();
 							if (letter.equalsIgnoreCase("A") || letter.equalsIgnoreCase("C") || letter.equalsIgnoreCase("G") | letter.equalsIgnoreCase("U")) {
 								this.letters.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(letter, new Rectangle2D.Float(x, y - fontSize, (float) metrics.stringWidth(letter), fontSize), font, null));
 							} else {
@@ -2251,7 +2256,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 						} else if (lineToLowerCase2.contains(helixLinePrefix)) {
 							this.parseText(reader, this.helixLabels);
 						} else if (lineToLowerCase2.contains(labelsLinePrefix)) {
-							this.parseText(reader, this.labels);
+							this.parseText(reader, this.labels, (String text) -> text.chars().allMatch(Character::isDigit));
 						}
 						_line = reader.readLine();
 					} while (_line != null);
@@ -2767,118 +2772,69 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 				endPoints.add(new Line2D.Float(Float.parseFloat(this.boundedSubstring(line, "x1=\"", "\"")), Float.parseFloat(this.boundedSubstring(line, "y1=\"", "\"")), Float.parseFloat(this.boundedSubstring(line, "x2=\"", "\"")), Float.parseFloat(this.boundedSubstring(line, "y2=\"", "\""))));
 			}
 		}
+		
+		private void parseText(BufferedReader reader, ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>> texts) throws IOException{
+			this.parseText(reader, texts, (String s) -> true);
+		}
 
-		private void parseText(BufferedReader reader, ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>> labels) throws IOException {
+		private void parseText(BufferedReader reader, ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>> texts, Function<String, Boolean> addCondition) throws IOException {
 			for (String line = reader.readLine(); line != null && !line.contains("</g>"); line = reader.readLine()) {
 				String[]
 					matrixEntries = this.boundedSubstring(line, "matrix(", ")").split("\\s+");
 				Vector2
 					position = new Vector2(Float.parseFloat(matrixEntries[4]), Float.parseFloat(matrixEntries[5]));
 				String
-					text = this.boundedSubstring(line, ">", "<");
-				HashMap<String, Object>
-					classAggregate = new HashMap<>();
-				String[] split;
-				for (int length = (split = this.boundedSubstring(line, "class=\"", "\"").split(" ")).length, i = 0; i < length; ++i) {
-					String
-						_class = split[i];
+					text = this.boundedSubstring(line, ">", "<"),
+					query = "class=\"";
+				if (addCondition.apply(text)) {
 					HashMap<String, Object>
-						classData = this.styleDataMap.get(_class);
-					try {
-						for (Map.Entry<String, Object> classDatum : classData.entrySet()) {
-							classAggregate.put(classDatum.getKey(), classDatum.getValue());
+						classAggregate = new HashMap<>();
+					int
+						queryIndex = line.indexOf(query);
+					Font
+						font;
+					float
+						fontSize;
+					if (queryIndex != -1) {
+						String[]
+							split = this.boundedSubstring(line, queryIndex + query.length(), "\"").split(" ");
+						for (String _class : split) {
+							HashMap<String, Object>
+								classData = this.styleDataMap.get(_class);
+							try {
+								for (Map.Entry<String, Object> classDatum : classData.entrySet()) {
+									classAggregate.put(classDatum.getKey(), classDatum.getValue());
+								}
+							} catch (NullPointerException ex) {
+								System.out.println("LINE: " + line);
+								int index = 0;
+								for (String key : this.styleDataMap.keySet()) {
+									System.out.println("key " + index + ": " + key);
+									index++;
+								}
+								System.out.println("_class: " + _class);
+								throw ex;
 						}
-					} catch (NullPointerException ex) {
-						System.out.println(line);
-						int index = 0;
-						for (String key : this.styleDataMap.keySet()) {
-							System.out.println("key " + index + ": " + key);
-							++index;
 						}
-						System.out.println("_class: " + _class);
-						throw ex;
+						fontSize = (float)classAggregate.get("font-size");
+						font = new Font((String)classAggregate.get("font-family"), Font.PLAIN, (int)fontSize);
+					} else {
+						fontSize = Float.parseFloat(this.boundedSubstring(line, "font-size=\"", "\""));
+						font = new Font(this.boundedSubstring(line, "font-family=\"", "\""), Font.PLAIN, (int)fontSize);
 					}
+					FontMetrics
+						metrics = ComplexParentFrame.frame.getFontMetrics(font);
+					texts.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(text, new Rectangle2D.Float(position.x, position.y - fontSize, (float) metrics.stringWidth(text), fontSize), font, (Float) classAggregate.get("stroke-width")));
 				}
-				float
-					fontSize = (float) classAggregate.get("font-size");
-				Font
-					font = new Font((String) classAggregate.get("font-family"), 0, (int) fontSize);
-				FontMetrics
-					metrics = ComplexParentFrame.frame.getFontMetrics(font);
-				labels.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(text, new Rectangle2D.Float(position.x, position.y - fontSize, (float) metrics.stringWidth(text), fontSize), font, (Float) classAggregate.get("stroke-width")));
 			}
 		}
-
-		private String boundedSubstring(String string, String query, String suffix) {
-			int
-				queryIndexPlusQueryLength = string.indexOf(query) + query.length();
+		
+		private String boundedSubstring(String string, int queryIndexPlusQueryLength, String suffix) {
 			return string.substring(queryIndexPlusQueryLength, string.indexOf(suffix, queryIndexPlusQueryLength));
 		}
 
-		private class Tuple2<T0, T1> {
-			private T0
-				t0;
-			private T1
-				t1;
-
-			private Tuple2(T0 t0, T1 t1) {
-				this.t0 = t0;
-				this.t1 = t1;
-			}
-		}
-
-		private class Tuple3<T0, T1, T2> {
-			private T0
-				t0;
-			private T1
-				t1;
-			private T2
-				t2;
-
-			private Tuple3(T0 t0, T1 t1, T2 t2) {
-				this.t0 = t0;
-				this.t1 = t1;
-				this.t2 = t2;
-			}
-		}
-
-		private class Tuple4<T0, T1, T2, T3> {
-			private T0
-				t0;
-			private T1
-				t1;
-			private T2
-				t2;
-			private T3
-				t3;
-
-			private Tuple4(T0 t0, T1 t1, T2 t2, T3 t3) {
-				this.t0 = t0;
-				this.t1 = t1;
-				this.t2 = t2;
-				this.t3 = t3;
-			}
-		}
-
-		private class Tuple5<T0, T1, T2, T3, T4> {
-			private T0
-				t0;
-			private T1
-				t1;
-			private T2
-				t2;
-			private T3
-				t3;
-			private T4
-				t4;
-
-			private Tuple5(T0 t0, T1 t1, T2 t2, T3 t3, T4 t4) {
-				this.t0 = t0;
-				this.t1 = t1;
-				this.t2 = t2;
-				this.t3 = t3;
-				this.t4 = t4;
-			}
+		private String boundedSubstring(String string, String query, String suffix) {
+			return boundedSubstring(string, string.indexOf(query) + query.length(), suffix);
 		}
 	}
 
