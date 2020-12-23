@@ -1,0 +1,61 @@
+
+<!ELEMENT ImageXMLDocument (ImageSpecs?)>
+
+<!ELEMENT ImageSpecs (ImageDimension, ImageExtras, ImageTextList)>
+<!ATTLIST ImageSpecs
+	X CDATA #REQUIRED
+	Y CDATA #REQUIRED
+	W CDATA #REQUIRED
+	H CDATA #REQUIRED
+	BorderDepth CDATA #IMPLIED
+	GuiBGColor CDATA #IMPLIED
+	BtBGColor CDATA #REQUIRED
+>
+
+<!ELEMENT HitValues EMPTY>
+<!ATTLIST HitValues
+	VeryWeakValue CDATA #REQUIRED
+	WeakValue CDATA #REQUIRED
+	MediumValue CDATA #REQUIRED
+	StrongValue CDATA #REQUIRED
+>
+
+<!ELEMENT DensitySpacing EMPTY>
+<!ATTLIST DensitySpacing
+	Distance CDATA #REQUIRED
+>
+
+<!ELEMENT CloudDataFile EMPTY>
+<!ATTLIST CloudDataFile
+	FileName CDATA #REQUIRED
+>
+
+<!ELEMENT CloudOutputFile EMPTY>
+<!ATTLIST CloudOutputFile
+	FileName CDATA #REQUIRED
+>
+
+<!ELEMENT PDBSphere EMPTY>
+<!ATTLIST PDBSphere
+	SerialID CDATA #REQUIRED
+	Color CDATA #IMPLIED
+	Radius CDATA #IMPLIED
+	HitRadius (
+		VeryWeak |
+		veryweak |
+		V |
+		v |
+		Weak |
+		weak |
+		W |
+		w |
+		Medium |
+		medium |
+		M |
+		m |
+		Strong |
+		strong |
+		S |
+		s) "Weak"
+>
+
