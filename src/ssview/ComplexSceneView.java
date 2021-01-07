@@ -2008,7 +2008,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		private ArrayList<Line2D.Float>
 			nucleotideLines = new ArrayList<>(),
 			labelLines = new ArrayList<>();
-		private ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>>
+		private ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Color>>
 			letters = new ArrayList<>(),
 			helixLabels = new ArrayList<>(),
 			labels = new ArrayList<>();
@@ -2018,7 +2018,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			scale = 1.0f,
 			deltaScalar = 1.05f,
 			lineExtensionScalar = 3.5f;
-		private ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>
+		private ArrayList<Tuple3<Tuple5<String, Rectangle2D.Float, Font, Float, Color>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>
 			pairsData = new ArrayList<>();
 		private ArrayList<Tuple2<Line2D.Float, Color>>
 			debugLines = new ArrayList<>();
@@ -2140,7 +2140,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 								label = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<").trim();
 							float
 								width = (float)metrics.stringWidth(label);
-							this.labels.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(label, new Rectangle2D.Float(x - width / 2.0f, y - fontSize, width, fontSize), font, null));
+							this.labels.add(new Tuple5<String, Rectangle2D.Float, Font, Float, Color>(label, new Rectangle2D.Float(x - width / 2.0f, y - fontSize, width, fontSize), font, null, null));
 						} /*else if (line.contains("title")) {
 							System.out.println("line: " + line);
 							float
@@ -2167,7 +2167,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 							String
 								letter = this.boundedSubstring(line.substring(line.indexOf("text")), ">", "<").trim();//letter = this.boundedSubstring(line, ">", "<").strip();
 							if (letter.equalsIgnoreCase("A") || letter.equalsIgnoreCase("C") || letter.equalsIgnoreCase("G") | letter.equalsIgnoreCase("U")) {
-								this.letters.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(letter, new Rectangle2D.Float(x, y - fontSize, (float) metrics.stringWidth(letter), fontSize), font, null));
+								this.letters.add(new Tuple5<String, Rectangle2D.Float, Font, Float, Color>(letter, new Rectangle2D.Float(x, y - fontSize, (float) metrics.stringWidth(letter), fontSize), font, null, null));
 							} else {
 //								System.out.println(line);
 							}
@@ -2176,7 +2176,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					float
 						dx = 0.0f,
 						dy = 0.0f;
-					for (Tuple4<String, Rectangle2D.Float, Font, Float> letter : this.letters) {
+					for (Tuple5<String, Rectangle2D.Float, Font, Float, Color> letter : this.letters) {
 						dx += letter.t1.width;
 						dy -= letter.t1.height;
 					}
@@ -2188,7 +2188,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 						labelLine.y1 += dy;
 						labelLine.y2 += dy;
 					}
-					for (Tuple4<String, Rectangle2D.Float, Font, Float> label : this.labels) {
+					for (Tuple5<String, Rectangle2D.Float, Font, Float, Color> label : this.labels) {
 						label.t1.x += label.t1.width / 6.0f;
 					}
 //					System.out.println("letters.size(): " + letters.size());
@@ -2263,7 +2263,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					if (formatRequiresXYShift) {
 						float
 							dy = 0.0f;
-						for (Tuple4<String, Rectangle2D.Float, Font, Float> letter : this.letters) {
+						for (Tuple5<String, Rectangle2D.Float, Font, Float, Color> letter : this.letters) {
 							dy -= letter.t1.height;
 						}
 						dy /= this.letters.size() * 6.0f;
@@ -2274,7 +2274,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					}
 				}
 				for (Line2D.Float _labelLine : this.labelLines) {
-					Tuple4<String, Rectangle2D.Float, Font, Float>
+					Tuple5<String, Rectangle2D.Float, Font, Float, Color>
 						label = this.findPairLabel(_labelLine);
 					if (label != null) {
 						Vector2
@@ -2282,29 +2282,29 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 						Tuple5<String, Rectangle2D.Float, Font, Float, Integer>
 							letter = (Vector2.dot(Vector2.subtract(new Vector2(_labelLine.x2, _labelLine.y2), v1), Vector2.subtract(new Vector2((float) label.t1.getCenterX(), (float) label.t1.getCenterY()), v1)) > 0.0f) ? this.findPairLetter(_labelLine) : this.findPairLetter(_labelLine);
 						if (letter != null) {
-							this.pairsData.add(new Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>(label, letter, _labelLine));
+							this.pairsData.add(new Tuple3<>(label, letter, _labelLine));
 						}
 					}
 				}
 				if (pairsData.size() > 0) {
 //					System.out.println(pairsData.get(0).t1.t4 + " " + pairsData.get(0).t0.t0 + "\n");
-					HashMap<Integer, ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>>
+					HashMap<Integer, ArrayList<Tuple3<Tuple5<String, Rectangle2D.Float, Font, Float, Color>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>>
 						offsetData = new HashMap<>();
-					for (Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pairsDatum : pairsData) {
+					for (Tuple3<Tuple5<String, Rectangle2D.Float, Font, Float, Color>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pairsDatum : pairsData) {
 						int
 							offset = Integer.parseInt(pairsDatum.t0.t0) - pairsDatum.t1.t4;
 						if (offsetData.containsKey(offset)) {
 							offsetData.get(offset).add(pairsDatum);
 						} else {
-							ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>
+							ArrayList<Tuple3<Tuple5<String, Rectangle2D.Float, Font, Float, Color>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>
 								newList = new ArrayList<>();
 							newList.add(pairsDatum);
 							offsetData.put(offset, newList);
 						}
 					}
-					Tuple2<Integer, ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>>
+					Tuple2<Integer, ArrayList<Tuple3<Tuple5<String, Rectangle2D.Float, Font, Float, Color>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>>>
 						mode = new Tuple2<>(0, new ArrayList<>());
-					offsetData.forEach((Integer offset, ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>> pairs) -> {
+					offsetData.forEach((Integer offset, ArrayList<Tuple3<Tuple5<String, Rectangle2D.Float, Font, Float, Color>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>> pairs) -> {
 						if (pairs.size() > mode.t1.size()) {
 							mode.t0 = offset;
 							mode.t1 = pairs;
@@ -2312,16 +2312,16 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					});
 					offsetData.remove(mode.t0);
 //					System.out.println("Offset: " + mode.t0 + "\tSize: " + mode.t1.size() + "*");
-					offsetData.forEach((Integer offset, ArrayList<Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>> pairs) -> {
+					offsetData.forEach((Integer offset, ArrayList<Tuple3<Tuple5<String, Rectangle2D.Float, Font, Float, Color>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float>> pairs) -> {
 //						System.out.println("Offset: " + offset + "\tSize: " + pairs.size());
 						int
 							delta = offset - mode.t0;
-						for (Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pair : pairs) {
+						for (Tuple3<Tuple5<String, Rectangle2D.Float, Font, Float, Color>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pair : pairs) {
 							Tuple5<String, Rectangle2D.Float, Font, Float, Integer>
 								prevT1 = pair.t1;
 							int
 								newIndex = prevT1.t4 + delta;
-							Tuple4<String, Rectangle2D.Float, Font, Float>
+							Tuple5<String, Rectangle2D.Float, Font, Float, Color>
 								newLetter = letters.get(newIndex);
 							pair.t1 = new Tuple5<>(newLetter.t0, newLetter.t1, newLetter.t2, newLetter.t3, newIndex);
 							if (prevT1.t1.width != pair.t1.t1.width) {
@@ -2405,7 +2405,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					maxX = Float.MIN_VALUE,
 					minY = Float.MAX_VALUE,
 					maxY = Float.MIN_VALUE;
-				for (Tuple4<String, Rectangle2D.Float, Font, Float> letter : this.letters) {
+				for (Tuple5<String, Rectangle2D.Float, Font, Float, Color> letter : this.letters) {
 					float
 						x = letter.t1.x,
 						y = letter.t1.y;
@@ -2422,18 +2422,30 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 				}
 				Vector2
 					mid = new Vector2((minX + maxX) / 2.0f, (minY + maxY) / 2.0f);
-				for (Tuple4<String, Rectangle2D.Float, Font, Float> letter : this.letters) {
+				for (Tuple5<String, Rectangle2D.Float, Font, Float, Color> letter : this.letters) {
 					Vector2
 						letterLocation = Vector2.subtract(new Vector2(letter.t1.x, letter.t1.y), mid);
 					letterLocation.y = -letterLocation.y;
 					writer.println(String.valueOf(letter.t0) + " " + letterLocation.x + " " + letterLocation.y);
 				}
 				writer.println("</NucListData>");
-				String
-					lineStarter = "<Nuc RefIDs='1-" + this.letters.size() + "'";
-				writer.println(String.valueOf(lineStarter) + " Color='ff0000' FontID='0' FontSize='" + 4 + "'/>");
-				writer.println(String.valueOf(lineStarter) + " IsSchematic='false' SchematicColor='0' SchematicLineWidth='1.5' SchematicBPLineWidth='1.0' SchematicBPGap='2.0' SchematicFPGap='2.0' SchematicTPGap='2.0' IsNucPath='false' NucPathColor='ff0000' NucPathLineWidth='0.0' />");
-				for (Tuple3<Tuple4<String, Rectangle2D.Float, Font, Float>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pair : this.pairsData) {
+				writer.println("<Nuc RefIDs='1-" + this.letters.size() + "' Color='ff0000' FontID='0' FontSize='" + 4 + "'/>");
+				int
+					index = 1;
+				for (Tuple5<String, Rectangle2D.Float, Font, Float, Color> letter : letters) {
+					int
+						colorAsInt;
+					if (letter.t4 == null) {
+//						colorAsInt = Color.HSBtoRGB(((float)index) / letters.size(), 1f, 1f);
+						colorAsInt = 0;
+					} else {
+						colorAsInt = letter.t4.getRGB();
+					}
+					writer.println("<Nuc RefIDs='" + index + "-" + index + "' Color='" + Integer.toHexString(colorAsInt & 0xFFFFFF) + "' FontID='0' FontSize='" + 4 + "'/>");
+					index++;
+				}
+				writer.println("<Nuc RefIDs='1-" + this.letters.size() + "' IsSchematic='false' SchematicColor='0' SchematicLineWidth='1.5' SchematicBPLineWidth='1.0' SchematicBPGap='2.0' SchematicFPGap='2.0' SchematicTPGap='2.0' IsNucPath='false' NucPathColor='ff0000' NucPathLineWidth='0.0' />");
+				for (Tuple3<Tuple5<String, Rectangle2D.Float, Font, Float, Color>, Tuple5<String, Rectangle2D.Float, Font, Float, Integer>, Line2D.Float> pair : this.pairsData) {
 					double
 						strokeWidth = (pair.t0.t3 == null) ? ((pair.t1.t3 == null) ? 0.2f : pair.t1.t3) : pair.t0.t3;
 					writer.println("<Nuc RefID='" + (pair.t1.t4 + 1) + "'>");
@@ -2621,8 +2633,8 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			return (float) line.getP1().distance(line.getP2());
 		}
 
-		private Tuple4<String, Rectangle2D.Float, Font, Float> findPairLabel(Line2D.Float line) {
-			for (Tuple4<String, Rectangle2D.Float, Font, Float> label : this.labels) {
+		private Tuple5<String, Rectangle2D.Float, Font, Float, Color> findPairLabel(Line2D.Float line) {
+			for (Tuple5<String, Rectangle2D.Float, Font, Float, Color> label : this.labels) {
 				Rectangle2D.Float
 					t1 = this.modifyLabelBounds(label.t1);
 				float
@@ -2639,7 +2651,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					return label;
 				}
 			}
-			for (Tuple4<String, Rectangle2D.Float, Font, Float> label : this.labels) {
+			for (Tuple5<String, Rectangle2D.Float, Font, Float, Color> label : this.labels) {
 				Rectangle2D.Float
 					t1 = this.modifyLetterBounds(label.t1);
 				float
@@ -2659,9 +2671,9 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			}
 			double
 				minimumDistanceSquared = Double.MAX_VALUE;
-			Tuple4<String, Rectangle2D.Float, Font, Float>
+			Tuple5<String, Rectangle2D.Float, Font, Float, Color>
 				minimumDistanceLabel = null;
-			for (Tuple4<String, Rectangle2D.Float, Font, Float> label2 : this.labels) {
+			for (Tuple5<String, Rectangle2D.Float, Font, Float, Color> label2 : this.labels) {
 				Rectangle2D.Float
 					t2 = this.modifyLabelBounds(label2.t1);
 				float
@@ -2681,7 +2693,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 
 		private Tuple5<String, Rectangle2D.Float, Font, Float, Integer> findPairLetter(Line2D.Float line) {
 			for (int index = 0; index < this.letters.size(); index++) {
-				Tuple4<String, Rectangle2D.Float, Font, Float>
+				Tuple5<String, Rectangle2D.Float, Font, Float, Color>
 					letter = this.letters.get(index);
 				float
 					maximumRadius = Math.max(letter.t1.width, letter.t1.height) / 2.0f;
@@ -2700,7 +2712,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			double
 				closestDistance = Double.MAX_VALUE;
 			for (int index = 0; index < this.letters.size(); index++) {
-				Tuple4<String, Rectangle2D.Float, Font, Float>
+				Tuple5<String, Rectangle2D.Float, Font, Float, Color>
 					letter = this.letters.get(index);
 				Rectangle2D.Float
 					t1 = this.modifyLetterBounds(letter.t1);
@@ -2721,7 +2733,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 				closestDistance = Double.MAX_VALUE;
 			for (int index = 0; index < this.letters.size(); index++) {
 				if (index != closestIndex) {
-					Tuple4<String, Rectangle2D.Float, Font, Float>
+					Tuple5<String, Rectangle2D.Float, Font, Float, Color>
 						letter = this.letters.get(index);
 					Rectangle2D.Float
 						t1 = this.modifyLetterBounds(letter.t1);
@@ -2773,11 +2785,11 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			}
 		}
 		
-		private void parseText(BufferedReader reader, ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>> texts) throws IOException{
+		private void parseText(BufferedReader reader, ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Color>> texts) throws IOException{
 			this.parseText(reader, texts, (String s) -> true);
 		}
 
-		private void parseText(BufferedReader reader, ArrayList<Tuple4<String, Rectangle2D.Float, Font, Float>> texts, Function<String, Boolean> addCondition) throws IOException {
+		private void parseText(BufferedReader reader, ArrayList<Tuple5<String, Rectangle2D.Float, Font, Float, Color>> texts, Function<String, Boolean> addCondition) throws IOException {
 			for (String line = reader.readLine(); line != null && !line.contains("</g>"); line = reader.readLine()) {
 				String[]
 					matrixEntries = this.boundedSubstring(line, "matrix(", ")").split("\\s+");
@@ -2824,9 +2836,16 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					}
 					FontMetrics
 						metrics = ComplexParentFrame.frame.getFontMetrics(font);
-					texts.add(new Tuple4<String, Rectangle2D.Float, Font, Float>(text, new Rectangle2D.Float(position.x, position.y - fontSize, (float) metrics.stringWidth(text), fontSize), font, (Float) classAggregate.get("stroke-width")));
+//					System.out.println("\n" + line + "\n");
+					texts.add(new Tuple5<String, Rectangle2D.Float, Font, Float, Color>(text, new Rectangle2D.Float(position.x, position.y - fontSize, (float) metrics.stringWidth(text), fontSize), font, (Float) classAggregate.get("stroke-width"), parseSVGColor(this.boundedSubstring(line, "fill=\"", "\""))));
 				}
 			}
+		}
+		
+		private Color parseSVGColor(String colorString) {
+			String
+				rgbStrings[] = this.boundedSubstring(colorString, "rgb(", ")").split(",");
+			return new Color(Integer.parseInt(rgbStrings[0].strip()), Integer.parseInt(rgbStrings[1].strip()), Integer.parseInt(rgbStrings[2].strip()));
 		}
 		
 		private String boundedSubstring(String string, int queryIndexPlusQueryLength, String suffix) {

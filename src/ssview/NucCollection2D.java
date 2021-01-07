@@ -10,8 +10,6 @@ import java.awt.geom.GeneralPath;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.Enumeration;
 import java.util.LinkedList;
@@ -24,6 +22,7 @@ import jimage.DrawStringObject;
 import util.GraphicsUtil;
 import util.PostScriptUtil;
 import util.StringUtil;
+import util.Tuple2;
 import util.math.BLine2D;
 import util.math.BRectangle2D;
 import util.math.BVector2d;
@@ -1807,100 +1806,203 @@ public void printComplexCSV(PrintWriter out, LinkedList<Nuc2D> nucleotides, doub
 					}
 				}
 			}
-			this.reverseY(nucleotides);
-			minY = MAX_YCO - maxY;
-			maxY = MAX_YCO - minY;
-//			minY = MAX_YCO - minY;
-//			maxY = MAX_YCO - maxY;
-//			double temp = minY;
-//			minY = maxY;
-//			maxY = temp;
-			this.scaleEverything(nucleotides, minX, minY, maxX, maxY); //also scales font of nuc and labels
-			double
-				scale = Math.min((MAX_XCO - MIN_XCO) / (maxX - minX), (MAX_YCO - MIN_YCO) / (maxY - minY));
-			minX *= scale;
-			minY *= scale;
-			maxX *= scale;
-			maxY *= scale;
-			this.ridNegatives(nucleotides, minX, minY);
-			double
-				shiftX = MIN_XCO - minX,
-				shiftY = MIN_YCO - minY;
-			minX += shiftX;
-			maxX += shiftX;
-			minY += shiftY;
-			maxY += shiftY;
-			this.centerEverything(nucleotides, maxX, maxY);
 			
+			double
+				sx = (MAX_XCO - MIN_XCO) / (maxX - minX),
+				sy = -(MAX_YCO - MIN_YCO) / (maxY - minY),
+				cx0 = (minX + maxX) / 2d,
+				cx1 = (MIN_XCO + MAX_XCO) / 2d,
+				cy0 = (minY + maxY) / 2d,
+				cy1 = (MIN_YCO + MAX_YCO) / 2d;
+//			System.out.println("Transform(minX, minY): " + transform(minX, minY, sx, sy, cx0, cy0, cx1, cy1));
+//			System.out.println("Transform(minX, maxY): " + transform(minX, maxY, sx, sy, cx0, cy0, cx1, cy1));
+//			System.out.println("Transform(maxX, maxY): " + transform(maxX, maxY, sx, sy, cx0, cy0, cx1, cy1));
+//			System.out.println("Transform(maxX, minY): " + transform(maxX, minY, sx, sy, cx0, cy0, cx1, cy1));
+//			System.out.println("Transform(cx, cy): " + transform((minX + maxX) / 2, (minY + maxY) / 2, sx, sy, cx0, cy0, cx1, cy1));
+//			System.out.println("minX: " + minX + "\nmaxX: " + maxX + "\nminY: " + minY + "\nmaxY: " + maxY);
+//			System.out.println("MIN_XCO: " + MIN_XCO + "\nMAX_XCO: " + MAX_XCO + "\nMIN_YCO: " + MIN_YCO + "\nMAX_YCO: " + MAX_YCO);
+//			System.out.println("cx1: " + (MIN_XCO + MAX_XCO) / 2 + "\ncy1: " + (MIN_YCO + MAX_YCO) / 2);
+//			System.out.println();
+			double
+				fontScalar = 1.2d;
 			for (Nuc2D nucleotide : nucleotides) {
-				out.print(moleculeName + ":" + nucleotide.getID() + "," + nucleotide.getNucChar() + "," + StringUtil.roundStrVal(nucleotide.getX(), 3) + "," + StringUtil.roundStrVal(nucleotide.getY(), 3) + "," + Integer.toHexString(nucleotide.getColor().getRGB() & 0x00ffffff) + "," + nucleotide.getFont().getSize());
+				Font
+					nucleotideFont = nucleotide.getFont();
+				FontMetrics
+					metrics = ComplexParentFrame.frame.getFontMetrics(nucleotideFont);
+				double
+					nucX = sx * (nucleotide.getX() - cx0) + cx1,
+					nucY = sy * (nucleotide.getY() - cy0) + cy1;
+				int
+					nucFontSize = (int)Math.round(Math.abs(sy) * fontScalar * nucleotideFont.getSize2D());
+				out.print(
+					moleculeName + ":" + nucleotide.getID() + 
+					"," + nucleotide.getNucChar() + 
+					"," + StringUtil.roundStrVal(nucX, 3) + 
+					"," + StringUtil.roundStrVal(nucY, 3) + 
+					"," + Integer.toHexString(nucleotide.getColor().getRGB() & 0x00ffffff) + 
+					"," + nucFontSize
+				);
 				Vector
 					labelList = nucleotide.getLabelList();
 				if (labelList != null) {
-					for (int j = 1; j < labelList.size(); j += 2) {
+					for (int i = 1; i < labelList.size(); i += 2) {
 						DrawLineObject
-							drawLineObject = (DrawLineObject)labelList.get(j - 1);
+							drawLineObject = (DrawLineObject)labelList.get(i - 1);
 						DrawStringObject
-							drawStringObject = (DrawStringObject)labelList.get(j);
+							drawStringObject = (DrawStringObject)labelList.get(i);
 						if (drawLineObject.getIsPickable() && drawStringObject.getIsPickable()) {
 							BLine2D
 								bLine2D = drawLineObject.getBLine2D();
 							Point2D
 								p1 = bLine2D.getP1(),
 								p2 = bLine2D.getP2();
-							double
-								nucX = nucleotide.getX(),
-								nucY = nucleotide.getY();
-							out.print("," + StringUtil.roundStrVal(nucX + p1.getX(), 2) + "," + StringUtil.roundStrVal(nucY + p1.getY(), 2) + "," + StringUtil.roundStrVal(nucX + p2.getX(), 2) + "," + StringUtil.roundStrVal(nucY + p2.getY(), 2) + "," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + "," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) + "," + StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + drawStringObject.getDrawString() + "," + drawStringObject.getFont().getSize() + "," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff));
+							String
+								labelText = drawStringObject.getDrawString();
+							int
+								fontSize = (int)Math.round(Math.abs(sy) * drawStringObject.getFont().getSize2D());
+							out.print(
+								"," + StringUtil.roundStrVal(nucX + sx * p1.getX(), 2) + 
+								"," + StringUtil.roundStrVal(nucY + sy * p1.getY(), 2) + 
+								"," + StringUtil.roundStrVal(nucX + sx * p2.getX(), 2) + 
+								"," + StringUtil.roundStrVal(nucY + sy * p2.getY(), 2) + 
+								"," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + 
+								"," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) +
+								"," + StringUtil.roundStrVal(nucX + sx * (drawStringObject.getX() - metrics.stringWidth(labelText) * 2d / 3d), 2) +
+								"," + StringUtil.roundStrVal(nucY + sy * drawStringObject.getY() + nucFontSize / 3d, 2) + 
+//								"," + StringUtil.roundStrVal(sx * (nucX + drawStringObject.getX() - cx0) + cx1 - metrics.stringWidth(labelText) / 2d, 2) + 
+//								"," + StringUtil.roundStrVal(sy * (nucY + drawStringObject.getY() - cy0) + cy1 + nucFontSize / 4d, 2) + 
+								"," + labelText + 
+								"," + StringUtil.roundStrVal(fontSize, 2) + 
+								"," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff)
+							);
 						}
 					}
 				}
 				out.println();
 			}
-//			for (int i = 0; i < delineators.size(); i+=2) {
-//				Nuc2D
-//					nuc0 = (Nuc2D)((NucNode)delineators.elementAt(i)),
-//					nuc1 = (Nuc2D)((NucNode)delineators.elementAt(i+1));
-//				for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
-//					Nuc2D
-//						nuc = sstr.getNuc2DAt(nucID);
-//					if (nuc != null) {
-//						String
-//							outputLine = moleculeName + ":" + nucID + "," + nuc.getNucChar() + "," + StringUtil.roundStrVal(nuc.getX(), 3) + "," + StringUtil.roundStrVal(nuc.getY(), 3) + "," + Integer.toHexString(nuc.getColor().getRGB() & 0x00ffffff) + "," + nuc.getFont().getSize();
-//						out.print(outputLine);
-//						Vector
-//							labelList = nuc.getLabelList();
-//						if (labelList != null) {
+//			this.reverseY(nucleotides);
+//			minY = MAX_YCO - maxY;
+//			maxY = MAX_YCO - minY;
+////			minY = MAX_YCO - minY;
+////			maxY = MAX_YCO - maxY;
+////			double temp = minY;
+////			minY = maxY;
+////			maxY = temp;
+////			this.scaleEverything(nucleotides, minX, minY, maxX, maxY); //also scales font of nuc and labels
+//			double
+//				scale = Math.min((MAX_XCO - MIN_XCO) / (maxX - minX), (MAX_YCO - MIN_YCO) / (maxY - minY));
+//			minX *= scale;
+//			minY *= scale;
+//			maxX *= scale;
+//			maxY *= scale;
+////			this.ridNegatives(nucleotides, minX, minY);
+//			double
+//				shiftX = MIN_XCO - minX,
+//				shiftY = MIN_YCO - minY;
+//			minX += shiftX;
+//			maxX += shiftX;
+//			minY += shiftY;
+//			maxY += shiftY;
+////			this.centerEverything(nucleotides, maxX, maxY);
+//			
+//			double
+//				fontScalar = 1.2d;
+//			for (Nuc2D nucleotide : nucleotides) {
+//				Font
+//					nucleotideFont = nucleotide.getFont();
+//				FontMetrics
+//					metrics = ComplexParentFrame.frame.getFontMetrics(nucleotideFont);
+//				out.print(
+//					moleculeName + ":" + nucleotide.getID() + 
+//					"," + nucleotide.getNucChar() + 
+//					"," + StringUtil.roundStrVal(nucleotide.getX(), 3) + 
+//					"," + StringUtil.roundStrVal(nucleotide.getY(), 3) + 
+//					"," + Integer.toHexString(nucleotide.getColor().getRGB() & 0x00ffffff) + 
+//					"," + StringUtil.roundStrVal(nucleotideFont.getSize() * fontScalar, 3)
+//				);
+//				Vector
+//					labelList = nucleotide.getLabelList();
+//				if (labelList != null) {
+//					for (int j = 1; j < labelList.size(); j += 2) {
+//						DrawLineObject
+//							drawLineObject = (DrawLineObject)labelList.get(j - 1);
+//						DrawStringObject
+//							drawStringObject = (DrawStringObject)labelList.get(j);
+//						if (drawLineObject.getIsPickable() && drawStringObject.getIsPickable()) {
+//							BLine2D
+//								bLine2D = drawLineObject.getBLine2D();
+//							Point2D
+//								p1 = bLine2D.getP1(),
+//								p2 = bLine2D.getP2();
+//							double
+//								nucX = nucleotide.getX(),
+//								nucY = nucleotide.getY();
+//							String
+//								labelText = drawStringObject.getDrawString();
 //							int
-//								labelListSize = labelList.size();
-//							for (int j = 1; j < labelListSize; j += 2) {
-//								DrawLineObject
-//									drawLineObject = (DrawLineObject)labelList.get(j - 1);
-//								DrawStringObject
-//									drawStringObject = (DrawStringObject)labelList.get(j);
-//								if (drawLineObject.getIsPickable() && drawStringObject.getIsPickable()) {
-//									BLine2D
-//										bLine2D = drawLineObject.getBLine2D();
-//									Point2D
-//										p1 = bLine2D.getP1(),
-//										p2 = bLine2D.getP2();
-//									double
-//										nucX = nuc.getX(),
-//										nucY = nuc.getY();
-////									System.out.println(drawStringObject.getDrawString());
-//									out.print(", " + StringUtil.roundStrVal(nucX, 2) + "," + StringUtil.roundStrVal(nucY, 2) + "," + StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + "," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) + "," + (StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + drawStringObject.getDrawString()+ "," + drawStringObject.getFont().getSize() + "," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff)));
-////									out.print(", " + StringUtil.roundStrVal(nucX + p1.getX(), 2) + "," + StringUtil.roundStrVal(nucY + p1.getY(), 2) + "," + StringUtil.roundStrVal(nucX + p2.getX(), 2) + "," + StringUtil.roundStrVal(nucY + p2.getY(), 2) + "," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + "," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) + "," + (StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + drawStringObject.getDrawString()+ "," + drawStringObject.getFont().getSize() + "," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff)));
-//								}
-//							}
+//								fontSize = drawStringObject.getFont().getSize();
+//							out.print(
+//								"," + StringUtil.roundStrVal(nucX + p1.getX(), 2) + 
+//								"," + StringUtil.roundStrVal(nucY + p1.getY(), 2) + 
+//								"," + StringUtil.roundStrVal(nucX + p2.getX(), 2) + 
+//								"," + StringUtil.roundStrVal(nucY + p2.getY(), 2) + 
+//								"," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + 
+//								"," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) + 
+//								"," + StringUtil.roundStrVal(nucX + drawStringObject.getX() - metrics.stringWidth(labelText) / 2d, 2) + 
+//								"," + StringUtil.roundStrVal(nucY + drawStringObject.getY() + nucleotideFont.getSize() / 4d, 2) + 
+//								"," + labelText + 
+//								"," + StringUtil.roundStrVal(fontSize * fontScalar, 2) + 
+//								"," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff)
+//							);
 //						}
-//						out.println();
 //					}
 //				}
+//				out.println();
 //			}
+////			for (int i = 0; i < delineators.size(); i+=2) {
+////				Nuc2D
+////					nuc0 = (Nuc2D)((NucNode)delineators.elementAt(i)),
+////					nuc1 = (Nuc2D)((NucNode)delineators.elementAt(i+1));
+////				for (int nucID = nuc0.getID(); nucID <= nuc1.getID(); nucID++) {
+////					Nuc2D
+////						nuc = sstr.getNuc2DAt(nucID);
+////					if (nuc != null) {
+////						String
+////							outputLine = moleculeName + ":" + nucID + "," + nuc.getNucChar() + "," + StringUtil.roundStrVal(nuc.getX(), 3) + "," + StringUtil.roundStrVal(nuc.getY(), 3) + "," + Integer.toHexString(nuc.getColor().getRGB() & 0x00ffffff) + "," + nuc.getFont().getSize();
+////						out.print(outputLine);
+////						Vector
+////							labelList = nuc.getLabelList();
+////						if (labelList != null) {
+////							int
+////								labelListSize = labelList.size();
+////							for (int j = 1; j < labelListSize; j += 2) {
+////								DrawLineObject
+////									drawLineObject = (DrawLineObject)labelList.get(j - 1);
+////								DrawStringObject
+////									drawStringObject = (DrawStringObject)labelList.get(j);
+////								if (drawLineObject.getIsPickable() && drawStringObject.getIsPickable()) {
+////									BLine2D
+////										bLine2D = drawLineObject.getBLine2D();
+////									Point2D
+////										p1 = bLine2D.getP1(),
+////										p2 = bLine2D.getP2();
+////									double
+////										nucX = nuc.getX(),
+////										nucY = nuc.getY();
+//////									System.out.println(drawStringObject.getDrawString());
+////									out.print(", " + StringUtil.roundStrVal(nucX, 2) + "," + StringUtil.roundStrVal(nucY, 2) + "," + StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + "," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) + "," + (StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + drawStringObject.getDrawString()+ "," + drawStringObject.getFont().getSize() + "," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff)));
+//////									out.print(", " + StringUtil.roundStrVal(nucX + p1.getX(), 2) + "," + StringUtil.roundStrVal(nucY + p1.getY(), 2) + "," + StringUtil.roundStrVal(nucX + p2.getX(), 2) + "," + StringUtil.roundStrVal(nucY + p2.getY(), 2) + "," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + "," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) + "," + (StringUtil.roundStrVal(nucX + drawStringObject.getX(), 2) + "," + StringUtil.roundStrVal(nucY + drawStringObject.getY(), 2) + "," + drawStringObject.getDrawString()+ "," + drawStringObject.getFont().getSize() + "," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff)));
+////								}
+////							}
+////						}
+////						out.println();
+////					}
+////				}
+////			}
 		}
 	}
 }
-
 
 
 @Override
@@ -2106,7 +2208,9 @@ public void printComplexSVG(PrintWriter out, LinkedList<Nuc2D> nucleotides, doub
 				double
 					nucX = nuc.getX(),
 					nucY = nuc.getY();
-				letters.add("<text id=\"" + nuc.getID() + "\" transform=\"matrix(1 0 0 1 " + StringUtil.roundStrVal(nucX, 2) + " " + StringUtil.roundStrVal(nucY, 2) + ")\" fill=\"black\" font-family=\"" + nucFont.getFamily() + "\" font-weight=\"normal\" font-size=\"" + nucFont.getSize() + "\">" + nuc.getNucChar() + "</text>");
+				Color
+					nucColor = nuc.getColor();
+				letters.add("<text id=\"" + nuc.getID() + "\" transform=\"matrix(1 0 0 1 " + StringUtil.roundStrVal(nucX, 2) + " " + StringUtil.roundStrVal(nucY, 2) + ")\" fill=\"rgb(" + nucColor.getRed() + ", " + nucColor.getGreen() + ", " + nucColor.getBlue() + ")\" font-family=\"" + nucFont.getFamily() + "\" font-weight=\"normal\" font-size=\"" + nucFont.getSize() + "\">" + nuc.getNucChar() + "</text>");
 				dx = metrics.charWidth(nuc.getNucChar()) / 2d;
 				dy = -nucFont.getSize2D() / 2d;
 				Vector
