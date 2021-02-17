@@ -2,8 +2,6 @@ package ssview;
 
 import java.io.*;
 
-import javax.swing.UIManager;
-
 public class
 XRNA
 {
@@ -16,7 +14,6 @@ XRNA()
 static public void
 main(String args[])
 {	
-	//System.out.println("Hello, World.");
 	//String version = "beta 1.2.0, 3/27/09";
 	String version = "GT RiboVision Version 3/15/19";
 	System.out.println("XRNA version: " + version);

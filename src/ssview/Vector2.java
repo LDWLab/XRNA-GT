@@ -2,30 +2,29 @@ package ssview;
 
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.util.Arrays;
 
 public class Vector2 {
-	public float x, y;
+	public double x, y;
 	
-	private static final float DEFAULT_EPSILON = 1E-4f;
+	private static final double DEFAULT_EPSILON = 1E-4d;
 	
-	private static boolean areEqual(float a, float b) {
+	private static boolean areEqual(double a, double b) {
 		return areEqual(a, b, DEFAULT_EPSILON);
 	}
 	
-	private static boolean areEqual(float a, float b, float epsilon) {
+	private static boolean areEqual(double a, double b, double epsilon) {
 		return compare(a, b, epsilon) == 0;
 	}
 	
-	private static int compare(float a, float b) {
+	private static int compare(double a, double b) {
 		return compare(a, b, DEFAULT_EPSILON);
 	}
 	
-	private static int compare(float a, float b, float epsilon) {
-		float dif = a - b;
+	private static int compare(double a, double b, double epsilon) {
+		double dif = a - b;
 		if (dif < -epsilon) {
 			return -1;
 		} else if (dif > epsilon) {
@@ -35,11 +34,11 @@ public class Vector2 {
 		}
 	}
 	
-	public static boolean inBounds(float x, float x0, float x1) {
+	public static boolean inBounds(double x, double x0, double x1) {
 		return compareBounds(x, x0, x1) == 0;
 	}
 	
-	private static int compareBounds(float x, float x0, float x1) {
+	private static int compareBounds(double x, double x0, double x1) {
 		int cmp = compare(x, x0);
 		if (cmp < 0) {
 			return cmp;
@@ -55,14 +54,14 @@ public class Vector2 {
 		this(0f, 0f);
 	}
 	
-	public Vector2(float x, float y) {
+	public Vector2(double x, double y) {
 		this.x = x;
 		this.y = y;
 	}
 	
 	@Override
 	public int hashCode() {
-		return Arrays.hashCode(new float[] {x, y});
+		return Arrays.hashCode(new double[] {x, y});
 	}
 	
 	@Override
@@ -70,8 +69,8 @@ public class Vector2 {
 		return "<" + this.x + "," + this.y + ">";
 	}
 	
-	public float magnitude() {
-		return (float)Math.sqrt(dot(this, this));
+	public double magnitude() {
+		return (double)Math.sqrt(dot(this, this));
 	}
 	
 	public int roundedX() {
@@ -90,13 +89,13 @@ public class Vector2 {
 	public static Vector2 negate(Vector2 a) {
 		return scale(-1f, a);
 	}
-	public static Vector2 scale(Vector2 a, float b) {
+	public static Vector2 scale(Vector2 a, double b) {
 		return new Vector2(a.x * b, a.y * b);
 	}
-	public static Vector2 scale(float a, Vector2 b) {
+	public static Vector2 scale(double a, Vector2 b) {
 		return scale(b, a);
 	}
-	public static Vector2 scaleDown(Vector2 a, float b) {
+	public static Vector2 scaleDown(Vector2 a, double b) {
 		return new Vector2(a.x / b, a.y / b);
 	}
 	
@@ -104,24 +103,24 @@ public class Vector2 {
 		return scaleDown(a, a.magnitude());
 	}
 	
-	public static Vector2 interp(Vector2 v0, Vector2 v1, float t) {
+	public static Vector2 interp(Vector2 v0, Vector2 v1, double t) {
 		return add(v0, scale(subtract(v1, v0), t));
 	}
 	
-	public static float dot(Vector2 a, Vector2 b) {
+	public static double dot(Vector2 a, Vector2 b) {
 		return a.x * b.x + a.y * b.y;
 	}
 	
-	public static float cross(Vector2 a, Vector2 b) {
+	public static double cross(Vector2 a, Vector2 b) {
 		return a.x * b.y - a.y * b.x;
 	}
 	
-	public static float distance(Vector2 a, Vector2 b) {
+	public static double distance(Vector2 a, Vector2 b) {
 		return subtract(a, b).magnitude();
 	}
 	
-	public static float angle(Vector2 a, Vector2 b) {
-		return (float)Math.acos(Vector2.dot(a, b) / (a.magnitude() * b.magnitude()));
+	public static double angle(Vector2 a, Vector2 b) {
+		return (double)Math.acos(Vector2.dot(a, b) / (a.magnitude() * b.magnitude()));
 	}
 	
 	public static void drawLine(Graphics g, Vector2 a, Vector2 b) {
@@ -133,12 +132,12 @@ public class Vector2 {
 			r = Vector2.subtract(pPlusR, p),
 			s = Vector2.subtract(qPlusS, q),
 			qMinusP = Vector2.subtract(q, p);
-		float rCrossS = Vector2.cross(r, s);
+		double rCrossS = Vector2.cross(r, s);
 		if (areEqual(rCrossS, 0f)) {
-			float qMinusPCrossR = Vector2.cross(qMinusP, r);
+			double qMinusPCrossR = Vector2.cross(qMinusP, r);
 			if (areEqual(qMinusPCrossR, 0f)) {
 				Vector2 rOverRDotR = Vector2.scaleDown(r, Vector2.dot(r, r));
-				float
+				double
 					t0 = Vector2.dot(qMinusP, rOverRDotR),
 					t1 = t0 + Vector2.dot(s, rOverRDotR);
 				int
@@ -159,7 +158,7 @@ public class Vector2 {
 				return null;
 			}
 		} else {
-			float
+			double
 				t = Vector2.cross(qMinusP, s) / rCrossS,
 				u = Vector2.cross(qMinusP, r) / rCrossS;
 			if (inBounds(t, 0f, 1f) && inBounds(u, 0f, 1f)) {
@@ -170,7 +169,7 @@ public class Vector2 {
 		}
 	}
 	
-	public static Vector2[] vertices(Rectangle2D.Float rect) {
+	public static Vector2[] vertices(Rectangle2D.Double rect) {
 		Vector2[] vertices = new Vector2[4];
 		vertices[0] = new Vector2(rect.x, rect.y);
 		vertices[1] = new Vector2(rect.x + rect.width, rect.y);
@@ -179,7 +178,7 @@ public class Vector2 {
 		return vertices;
 	}
 	
-	public static Vector2 intersect(Rectangle2D.Float rect, Vector2 v0, Vector2 v1) {
+	public static Vector2 intersect(Rectangle2D.Double rect, Vector2 v0, Vector2 v1) {
 		Vector2
 			vertices[] = vertices(rect),
 			r0 = vertices[0],
@@ -207,16 +206,16 @@ public class Vector2 {
 	public static void draw(Graphics2D g, Vector2 a) {
 		draw(g, a, 1f);
 	}
-	public static void draw(Graphics2D g, Vector2 a, float radius) {
-		float diameter = radius * 2f;
-		g.draw(new Ellipse2D.Float(a.x - radius, a.y - radius, diameter, diameter));
+	public static void draw(Graphics2D g, Vector2 a, double radius) {
+		double diameter = radius * 2f;
+		g.draw(new Ellipse2D.Double(a.x - radius, a.y - radius, diameter, diameter));
 	}
 	
 	public static void fill(Graphics2D g, Vector2 a) {
 		fill(g, a, 1f);
 	}
-	public static void fill(Graphics2D g, Vector2 a, float radius) {
-		float diameter = radius * 2f;
-		g.fill(new Ellipse2D.Float(a.x - radius, a.y - radius, diameter, diameter));
+	public static void fill(Graphics2D g, Vector2 a, double radius) {
+		double diameter = radius * 2f;
+		g.fill(new Ellipse2D.Double(a.x - radius, a.y - radius, diameter, diameter));
 	}
 }

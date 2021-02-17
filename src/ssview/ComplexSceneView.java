@@ -88,6 +88,9 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreeSelectionModel;
 
+import io.STRParser;
+import io.SVGParser;
+import io.XRNAData;
 import jimage.DrawObject;
 import jimage.DrawObjectCollection;
 import jimage.DrawObjectView;
@@ -851,8 +854,9 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		genReadFileFilter.addExtension("ss");
 		genReadFileFilter.addExtension("ps");
 		genReadFileFilter.addExtension("svg");
+		genReadFileFilter.addExtension("str");
 		genReadFileFilter.setDescription(
-				"XRNA I/O files, old-style XRNA .ss files, old-style XRNA .ps files, or manually edited SVG files");
+				"XRNA I/O files, old-style XRNA .ss files, old-style XRNA .ps files, STR files, or manually edited SVG files");
 
 		complexTabbedPane = new JTabbedPane();
 		complexTabbedPane.setBackground(new Color(0xff9999ff));
@@ -1284,7 +1288,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 
 			String fileName = dataFile.getName();
 			if (fileName.endsWith(".ss") || fileName.endsWith(".xrna") || fileName.endsWith(".xml")
-					|| fileName.endsWith(".ps") || fileName.endsWith(".svg"))
+					|| fileName.endsWith(".ps") || fileName.endsWith(".svg") || fileName.endsWith(".str"))
 				this.setCurrentInputFile(dataFile);
 			else
 				this.setCurrentInputFile(new File(fileName + ".xrna"));
@@ -1932,8 +1936,11 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		}
 
 		// debug("Opening: " + getCurrentInputFile().getPath());
-
-		if (this.getCurrentInputFile().getName().endsWith(".ss")) {
+		File
+			currentInputFile = this.getCurrentInputFile();
+		String
+			currentInputFileName = currentInputFile.getName();
+		if (currentInputFileName.endsWith(".ss")) {
 			String fileName = getCurrentInputFile().getName();
 			String ssName = fileName.substring(0, fileName.length() - 3);
 
@@ -1950,7 +1957,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			} else {
 				this.centerScrollBars();
 			}
-		} else if (this.getCurrentInputFile().getName().endsWith(".ps")) {
+		} else if (currentInputFileName.endsWith(".ps")) {
 			String fileName = getCurrentInputFile().getName();
 			String ssName = fileName.substring(0, fileName.length() - 3);
 
@@ -1976,11 +1983,36 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			} else {
 				this.centerScrollBars();
 			}
-		} else if (this.getCurrentInputFile().getName().endsWith(".xml")
-				|| this.getCurrentInputFile().getName().endsWith(".xrna")) {
+		} else if (currentInputFileName.endsWith(".xml")
+				|| currentInputFileName.endsWith(".xrna")) {
 			this.parseXrna();
-		} else if (this.getCurrentInputFile().getName().endsWith(".svg")) {
-			new SVGToXRNAParser();
+		} else if (currentInputFileName.endsWith(".str")) {
+			STRParser
+				strParser = new STRParser(currentInputFile.getAbsolutePath());
+			File
+				temporaryXrna = /*new File("C:\\Users\\caede\\OneDrive\\Desktop\\Output.xrna");*/File.createTempFile("temp", ".xrna");
+			temporaryXrna.deleteOnExit();
+			strParser.printToXRNAFile(temporaryXrna);
+			ComplexSceneView.this.setCurrentInputFile(temporaryXrna);
+			ComplexSceneView.this.parseXrna();
+		} else if (currentInputFileName.endsWith(".svg")) {
+			// new SVGToXRNAParser();
+			SVGParser
+				svgParser = new SVGParser(currentInputFile.getAbsolutePath());
+			// svgParser.helixTexts = svgParser.inputHelixTexts();
+			// svgParser.labelTexts = svgParser.inputLabelTexts();
+			// svgParser.nucleotideTexts = svgParser.inputNucleotideTexts();
+			// svgParser.labelLines = svgParser.inputLabelLines();
+			// svgParser.nucleotideLines = svgParser.inputNucleotideLines();
+			// svgParser.invertYCoordinates();
+			// svgParser.display();
+
+			File
+				temporaryXrna = new File("C:\\Users\\caede\\OneDrive\\Desktop\\Output.xrna");/*File.createTempFile("temp", ".xrna");
+			temporaryXrna.deleteOnExit();*/
+			svgParser.printToXRNAFile(temporaryXrna);
+			ComplexSceneView.this.setCurrentInputFile(temporaryXrna);
+			ComplexSceneView.this.parseXrna();
 		} else {
 			alert("Currently can't work with file: " + getCurrentInputFile().getName());
 			this.setCurrentInputFile(null);
@@ -2197,6 +2229,7 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 						int
 							dotIndex = line3.indexOf("."),
 							openBracketIndex = line3.indexOf("{");
+						System.out.println("Line3: " + line3);
 						String
 							styleName = line3.substring(dotIndex + 1, openBracketIndex);
 						HashMap<String, Object>
@@ -2837,15 +2870,24 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 					FontMetrics
 						metrics = ComplexParentFrame.frame.getFontMetrics(font);
 //					System.out.println("\n" + line + "\n");
-					texts.add(new Tuple5<String, Rectangle2D.Float, Font, Float, Color>(text, new Rectangle2D.Float(position.x, position.y - fontSize, (float) metrics.stringWidth(text), fontSize), font, (Float) classAggregate.get("stroke-width"), parseSVGColor(this.boundedSubstring(line, "fill=\"", "\""))));
+					System.out.println("Line: " + line);
+					String
+						fillString = this.boundedSubstring(line, "fill=\"", "\"");
+					texts.add(new Tuple5<String, Rectangle2D.Float, Font, Float, Color>(text, new Rectangle2D.Float(position.x, position.y - fontSize, (float) metrics.stringWidth(text), fontSize), font, (Float) classAggregate.get("stroke-width"), fillString == null ? null : parseSVGColor(fillString)));
 				}
 			}
 		}
 		
 		private Color parseSVGColor(String colorString) {
 			String
-				rgbStrings[] = this.boundedSubstring(colorString, "rgb(", ")").split(",");
-			return new Color(Integer.parseInt(rgbStrings[0].strip()), Integer.parseInt(rgbStrings[1].strip()), Integer.parseInt(rgbStrings[2].strip()));
+				rgbString = this.boundedSubstring(colorString, "rgb(", ")");
+			if (rgbString == null) {
+				return null;
+			} else {
+				String
+					rgbStrings[] = rgbString.split(",");
+				return new Color(Integer.parseInt(rgbStrings[0].strip()), Integer.parseInt(rgbStrings[1].strip()), Integer.parseInt(rgbStrings[2].strip()));
+			}
 		}
 		
 		private String boundedSubstring(String string, int queryIndexPlusQueryLength, String suffix) {
@@ -2853,7 +2895,13 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		}
 
 		private String boundedSubstring(String string, String query, String suffix) {
-			return boundedSubstring(string, string.indexOf(query) + query.length(), suffix);
+			int
+				queryIndex = string.indexOf(query);
+			if (queryIndex == -1) {
+				return null;
+			} else {
+				return boundedSubstring(string, queryIndex + query.length(), suffix);
+			}
 		}
 	}
 

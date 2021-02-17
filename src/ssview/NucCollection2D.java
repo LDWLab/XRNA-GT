@@ -1814,15 +1814,6 @@ public void printComplexCSV(PrintWriter out, LinkedList<Nuc2D> nucleotides, doub
 				cx1 = (MIN_XCO + MAX_XCO) / 2d,
 				cy0 = (minY + maxY) / 2d,
 				cy1 = (MIN_YCO + MAX_YCO) / 2d;
-//			System.out.println("Transform(minX, minY): " + transform(minX, minY, sx, sy, cx0, cy0, cx1, cy1));
-//			System.out.println("Transform(minX, maxY): " + transform(minX, maxY, sx, sy, cx0, cy0, cx1, cy1));
-//			System.out.println("Transform(maxX, maxY): " + transform(maxX, maxY, sx, sy, cx0, cy0, cx1, cy1));
-//			System.out.println("Transform(maxX, minY): " + transform(maxX, minY, sx, sy, cx0, cy0, cx1, cy1));
-//			System.out.println("Transform(cx, cy): " + transform((minX + maxX) / 2, (minY + maxY) / 2, sx, sy, cx0, cy0, cx1, cy1));
-//			System.out.println("minX: " + minX + "\nmaxX: " + maxX + "\nminY: " + minY + "\nmaxY: " + maxY);
-//			System.out.println("MIN_XCO: " + MIN_XCO + "\nMAX_XCO: " + MAX_XCO + "\nMIN_YCO: " + MIN_YCO + "\nMAX_YCO: " + MAX_YCO);
-//			System.out.println("cx1: " + (MIN_XCO + MAX_XCO) / 2 + "\ncy1: " + (MIN_YCO + MAX_YCO) / 2);
-//			System.out.println();
 			double
 				fontScalar = 1.2d;
 			for (Nuc2D nucleotide : nucleotides) {
@@ -1868,11 +1859,11 @@ public void printComplexCSV(PrintWriter out, LinkedList<Nuc2D> nucleotides, doub
 								"," + StringUtil.roundStrVal(nucY + sy * p2.getY(), 2) + 
 								"," + StringUtil.roundStrVal(drawLineObject.getLineStroke().getLineWidth(), 2) + 
 								"," + Integer.toHexString(drawLineObject.getColor().getRGB() & 0x00ffffff) +
-								"," + StringUtil.roundStrVal(nucX + sx * (drawStringObject.getX() - metrics.stringWidth(labelText) * 2d / 3d), 2) +
-								"," + StringUtil.roundStrVal(nucY + sy * drawStringObject.getY() + nucFontSize / 3d, 2) + 
+								"," + StringUtil.roundStrVal(nucX + sx * (drawStringObject.getX() - metrics.stringWidth(labelText) / 2d), 2) +
+								"," + StringUtil.roundStrVal(nucY + sy * drawStringObject.getY() + nucFontSize / 2d, 2) + 
 //								"," + StringUtil.roundStrVal(sx * (nucX + drawStringObject.getX() - cx0) + cx1 - metrics.stringWidth(labelText) / 2d, 2) + 
 //								"," + StringUtil.roundStrVal(sy * (nucY + drawStringObject.getY() - cy0) + cy1 + nucFontSize / 4d, 2) + 
-								"," + labelText + 
+								"," + labelText +
 								"," + StringUtil.roundStrVal(fontSize, 2) + 
 								"," + Integer.toHexString(drawStringObject.getColor().getRGB() & 0x00ffffff)
 							);
