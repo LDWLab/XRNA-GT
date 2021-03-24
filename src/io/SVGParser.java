@@ -12,6 +12,7 @@ import java.awt.Color;
 
 import util.Tuple2;
 import util.Tree;
+import java.util.function.BiConsumer;
 
 public class SVGParser extends XRNAData {
     public static void main(String[] args) {
@@ -20,10 +21,20 @@ public class SVGParser extends XRNAData {
             outputXRNAFilePath = "C:\\Users\\caede\\OneDrive\\Desktop\\Output.xrna";
         SVGParser
             parser = new SVGParser(inputSVGFilePath);
+        // System.out.println(parser.groups.root.datum.);
         parser.printToXRNAFile(outputXRNAFilePath);
 
         // parser.display();
-        // parser.groups.iterationHelperSkipRoot((Tree<Group>.Node node, String printlnPrefix) -> System.out.println(printlnPrefix + node.datum.id + "\n" + printlnPrefix + "\t#lines: " + node.datum.lines.size() + "\n" + printlnPrefix + "\t#texts: " + node.datum.texts.size()), "", (String printlnPrefix) -> printlnPrefix + "\t");
+        // BiConsumer<Tree<Group>.Node, String>
+        //     foo = (Tree<Group>.Node node, String printlnPrefix) -> {
+        //         int
+        //             numLines = node.datum.lines.size(),
+        //             numTexts = node.datum.texts.size();
+        //         if (numLines != 0 || numTexts != 1) {
+        //             System.out.println(printlnPrefix + node.datum.id + "\n" + printlnPrefix + "\t#lines: " + numLines + "\n" + printlnPrefix + "\t#texts: " + numTexts);
+        //         }
+        //     };
+        // parser.groups.iterationHelperSkipRoot(foo, "", (String printlnPrefix) -> printlnPrefix + "\t");
     }
 
     private Tree<Group>
@@ -40,6 +51,36 @@ public class SVGParser extends XRNAData {
             Tree<RecursiveMatchIndices>
                 recursiveIndices = parseRecursiveContent(fileContents, "<svg[^>]*>", "<\\/svg\\s*>\n?");
             if (recursiveIndices.root.children.size() == 1 && recursiveIndices.root.children.get(0).children.size() == 0) {
+                Matcher
+                    svgHeaderMatcher = Pattern.compile("<svg[^>]*>").matcher(fileContents);
+                svgHeaderMatcher.find();
+                Matcher
+                    svgElementMatcher = Pattern.compile(HEADER_ELEMENT_REGEX).matcher(svgHeaderMatcher.group());
+                while (svgElementMatcher.find()) {
+                    String
+                        svgElement = svgElementMatcher.group();
+                    int
+                        equalsSignIndex = svgElement.indexOf("=");
+                    String
+                        label = svgElement.substring(0, equalsSignIndex).stripTrailing(),
+                        datum = svgElement.substring(equalsSignIndex + 1).stripLeading().replace("\"", "");
+                    if (label.equalsIgnoreCase("style")) {
+                        datum = datum.stripTrailing();
+                        String[]
+                            styleData = datum.split(";");
+                        // System.out.println("Datum: " + datum + " styleData: " + Arrays.toString(styleData));
+                        for (String styleDatum : styleData) {
+                            int
+                                colonIndex = styleDatum.indexOf(':');
+                            label = styleDatum.substring(0, colonIndex).stripTrailing();
+                            datum = styleDatum.substring(colonIndex + 1).stripLeading();
+                            if (label.equalsIgnoreCase("font-size")) {
+                                DEFAULT_FONT_SIZE = Integer.parseInt(datum.replace("px", ""));
+                                // System.out.println("Default font size: " + DEFAULT_FONT_SIZE);
+                            }
+                        }
+                    }
+                }
                 // For now, only deal with a single SVG element.
                 RecursiveMatchIndices
                     svgIndices = recursiveIndices.root.children.get(0).datum;
@@ -233,16 +274,33 @@ public class SVGParser extends XRNAData {
     }
 
     @Override
-    public ArrayList<Text> inputNucleotideTexts() {
-        ArrayList<Text>
-            inputNucleotideTexts = new ArrayList<Text>();
+    public ArrayList<ArrayList<Text>> inputNucleotideTexts() {
+        ArrayList<ArrayList<Text>>
+            inputNucleotideTexts = new ArrayList<>();
         this.groups.iterationHelperSkipRoot((Tree<Group>.Node node) -> {
             Group
                 g = node.datum;
             if (g.id != null && (g.id.contains("sequence") || g.id.contains("letters"))) {
-                inputNucleotideTexts.addAll(g.texts);
+                inputNucleotideTexts.add(g.texts);
             }
         });
+        // Nonstandard format. Treat all texts which match "A"|"C"|"G"|"U" as nucleotides.
+        if (inputNucleotideTexts.size() == 0) {
+            ArrayList<Text>
+                allNucleotideTexts = new ArrayList<Text>();
+            inputNucleotideTexts.add(allNucleotideTexts);
+            this.groups.iterationHelperSkipRoot((Tree<Group>.Node node) -> {
+                Group
+                    g = node.datum;
+                for (Text text : g.texts) {
+                    String
+                        content = text.content.strip();
+                    if (Pattern.matches("(A|C|G|U)", content)) {
+                        allNucleotideTexts.add(text);
+                    }
+                }
+            });
+        }
         return inputNucleotideTexts;
     }
 
@@ -257,6 +315,19 @@ public class SVGParser extends XRNAData {
                 inputNucleotideLines.addAll(g.lines);
             }
         });
+        if (inputNucleotideLines.size() == 0) {
+            this.groups.iterationHelperSkipRoot((Tree<Group>.Node node) -> {
+                Group
+                    g = node.datum;
+                for (Line line : g.lines) {
+                    String
+                        editedClassLabel = line.classLabel.strip().toLowerCase();
+                    if (!editedClassLabel.contains("numbering-line") && !editedClassLabel.contains("gray")) {
+                        inputNucleotideLines.add(line);
+                    }
+                }
+            });
+        }
         return inputNucleotideLines;
     }
 
@@ -285,6 +356,17 @@ public class SVGParser extends XRNAData {
                 inputLabelTexts.addAll(g.texts);
             }
         });
+        if (inputLabelTexts.size() == 0) {
+            this.groups.iterationHelperSkipRoot((Tree<Group>.Node node) -> {
+                Group
+                    g = node.datum;
+                for (Text text : g.texts) {
+                    if (text.classLabel.strip().toLowerCase().contains("numbering-label") && Pattern.matches("\\d+", text.content.strip())) {
+                        inputLabelTexts.add(text);
+                    }
+                }
+            });
+        }
         return inputLabelTexts;
     }
 
@@ -299,6 +381,17 @@ public class SVGParser extends XRNAData {
                 inputLabelLines.addAll(g.lines);
             }
         });
+        if (inputLabelLines.size() == 0) {
+            this.groups.iterationHelperSkipRoot((Tree<Group>.Node node) -> {
+                Group
+                    g = node.datum;
+                for (Line line : g.lines) {
+                    if (line.classLabel.strip().toLowerCase().contains("numbering-line")) {
+                        inputLabelLines.add(line);
+                    }
+                }
+            });
+        }
         return inputLabelLines;
     }
 
@@ -502,7 +595,8 @@ public class SVGParser extends XRNAData {
                     style = new Style();
                 String
                     strokeDatum = null,
-                    strokeWidthDatum = null;
+                    strokeWidthDatum = null,
+                    classLabel = "";
                 while (lineElementMatcher.find()) {
                     String
                         lineHeader = lineElementMatcher.group();
@@ -523,6 +617,7 @@ public class SVGParser extends XRNAData {
                         lineTransform = parseAffineMatrix(datum);
                     } else if (label.equalsIgnoreCase("class")) {
                         style = parseStyle(datum);
+                        classLabel = datum;
                     } else if (label.equalsIgnoreCase("stroke")) {
                         strokeDatum = datum;
                     } else if (label.equalsIgnoreCase("stroke-width")) {
@@ -551,8 +646,7 @@ public class SVGParser extends XRNAData {
                         transformedX1Y1 = AffineMatrix.multiply(lineTransform, x1, y1),
                         transformedX2Y2 = AffineMatrix.multiply(lineTransform, x2, y2);
                     Line
-                        line = new Line(transformedX1Y1.t0, transformedX1Y1.t1, transformedX2Y2.t0, transformedX2Y2.t1);
-                    line.style = style;
+                        line = new Line(transformedX1Y1.t0, transformedX1Y1.t1, transformedX2Y2.t0, transformedX2Y2.t1, style, classLabel);
                     this.lines.add(line);
                 }
             }
@@ -575,7 +669,10 @@ public class SVGParser extends XRNAData {
                 String
                     fillDatum = null,
                     fontFamilyDatum = null,
-                    fontSizeDatum = null;
+                    fontSizeDatum = null,
+                    xString = null,
+                    yString = null,
+                    classLabel = "";
                 while (textHeadElementMatcher.find()) {
                     String
                         textHeadElement = textHeadElementMatcher.group();
@@ -588,13 +685,27 @@ public class SVGParser extends XRNAData {
                         textTransform = parseAffineMatrix(datum);
                     } else if (label.equalsIgnoreCase("class")) {
                         style = parseStyle(datum);
+                        classLabel = datum;
                     } else if (label.equalsIgnoreCase("fill")) {
                         fillDatum = datum;
                     } else if (label.equalsIgnoreCase("font-family")) {
                         fontFamilyDatum = datum;
                     } else if (label.equalsIgnoreCase("font-size")) {
                         fontSizeDatum = datum;
+                    } else if (label.equalsIgnoreCase("x")) {
+                        xString = datum;
+                    } else if (label.equalsIgnoreCase("y")) {
+                        yString = datum;
                     }
+                }
+                boolean
+                    xStringNullFlag = xString == null,
+                    yStringNullFlag = yString == null;
+                if (!xStringNullFlag || !yStringNullFlag) {
+                    textTransform = AffineMatrix.multiply(textTransform, AffineMatrix.translate(
+                        xStringNullFlag ? 0d : Double.parseDouble(xString.strip()),
+                        yStringNullFlag ? 0d : Double.parseDouble(yString.strip())
+                    ));
                 }
                 boolean
                     styleChanged = false;
@@ -630,8 +741,7 @@ public class SVGParser extends XRNAData {
                 Tuple2<Double, Double>
                     xy = AffineMatrix.multiply(textTransform, 0d, 0d);
                 Text
-                    text = new Text(xy.t0, xy.t1, input.substring(textOpenMatcher.end(), textCloseMatcher.start()));
-                text.style = style;
+                    text = new Text(xy.t0, xy.t1, input.substring(textOpenMatcher.end(), textCloseMatcher.start()), style, classLabel);
                 this.texts.add(text);
             }
         }

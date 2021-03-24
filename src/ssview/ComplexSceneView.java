@@ -2008,8 +2008,8 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 			// svgParser.display();
 
 			File
-				temporaryXrna = File.createTempFile("temp", ".xrna");
-			temporaryXrna.deleteOnExit();
+				temporaryXrna = new File("C:\\Users\\caede\\OneDrive\\Desktop\\output.xrna");/*File.createTempFile("temp", ".xrna");*/
+			// temporaryXrna.deleteOnExit();
 			svgParser.printToXRNAFile(temporaryXrna);
 			ComplexSceneView.this.setCurrentInputFile(temporaryXrna);
 			ComplexSceneView.this.parseXrna();

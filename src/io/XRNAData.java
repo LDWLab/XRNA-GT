@@ -41,8 +41,9 @@ import ssview.ComplexParentFrame;
 import ssview.Vector2;
 
 public abstract class XRNAData {
+    public ArrayList<ArrayList<Text>>
+        nucleotideTexts;
     public ArrayList<Text>
-        nucleotideTexts,
         labelTexts,
         helixTexts;
     public ArrayList<Line>
@@ -53,7 +54,7 @@ public abstract class XRNAData {
     private ArrayList<Tuple3<Text, Line, Integer>>
         labels = new ArrayList<>();
 
-    public abstract ArrayList<Text> inputNucleotideTexts();
+    public abstract ArrayList<ArrayList<Text>> inputNucleotideTexts();
 
     public abstract ArrayList<Line> inputNucleotideLines();
 
@@ -66,8 +67,9 @@ public abstract class XRNAData {
     public void invertYCoordinates() {
         double
             maximumYIndex = -Double.MAX_VALUE;
-        List<ArrayList<Text>>
-            textLists = Arrays.asList(this.nucleotideTexts, this.labelTexts, this.helixTexts);
+        ArrayList<ArrayList<Text>>
+            textLists = new ArrayList<>(Arrays.asList(this.labelTexts, this.helixTexts));
+        textLists.addAll(this.nucleotideTexts);
         for (ArrayList<Text> texts : textLists) {
             for (Text text : texts) {
                 if (text.y > maximumYIndex) {
@@ -107,23 +109,62 @@ public abstract class XRNAData {
         this.nucleotideLines = this.inputNucleotideLines();
         this.labelLines = this.inputLabelLines();
 
+        HashMap<Integer, Integer>
+            listIndexToNucleotideBaseIndexMap = new HashMap<>();
+        int
+            listIndex = 0,
+            baseIndex = 0;
+        for (ArrayList<Text> nucleotideTextsSublist : this.nucleotideTexts) {
+            listIndexToNucleotideBaseIndexMap.put(listIndex, baseIndex);
+            listIndex++;
+            baseIndex += nucleotideTextsSublist.size();
+        }
         BiFunction<Vector2, Text, Double>
-            distanceMetric =  (Vector2 v, Text nucText) -> {
+            distanceMetric = (Vector2 v, Text nucText) -> {
                 return Vector2.distance(new Vector2(nucText.x, nucText.y), v);
             };
+        Function<Tuple3<Text, Integer, Integer>, Integer>
+            totalIndexHelper = t3 -> listIndexToNucleotideBaseIndexMap.get(t3.t1) + t3.t2;
+        // Function<Tuple4<Tuple3<Text, Integer, Integer>, Tuple3<Text, Integer, Integer>, Vector2, Vector2>, Boolean>
+        //     indicesCheck = t4 -> Math.abs(totalIndexHelper.apply(t4.t0) - totalIndexHelper.apply(t4.t1)) > 1,
+        //     nucPairValidator = this.lineSpecicifityFlag ? 
+        //     indicesCheck :
+        //     t4 -> {
+        //         Tuple3<Text, Integer, Integer>
+        //             nearestNucText0 = t4.t0,
+        //             nearestNucText1 = t4.t1;
+        //         if (!indicesCheck.apply(t4)) {
+        //             // System.out.println();
+        //             // System.out.println("Index0: " + t4.t0.t1 + " " + t4.t0.t2 + "\tIndex1: " + t4.t1.t1 + " " + t4.t1.t2 + "\tv0: " + t4.t2 + "\tv1: " + t4.t3 + "\tText: " + t4.t0.t0.content + " " + t4.t1.t0.content);
+        //             return false;
+        //         }
+        //         double
+        //             dist0 = Vector2.distance(t4.t2, new Vector2(nearestNucText0.t0.x, nearestNucText0.t0.y)),
+        //             dist1 = Vector2.distance(t4.t2, new Vector2(nearestNucText1.t0.x, nearestNucText1.t0.y)),
+        //             ratio = dist0 >= dist1 ? dist0 / dist1 : dist1 / dist0,
+        //             threshold = 3d;
+        //         return ratio <= threshold;
+        //     };
         for (Line nucBondLine : this.nucleotideLines) {
-            nucBondLine = nucBondLine.scale(2d);
-            Vector2
-                v0 = new Vector2(nucBondLine.x0, nucBondLine.y0),
-                v1 = new Vector2(nucBondLine.x1, nucBondLine.y1);
-            Tuple2<Text, Integer>
-                nearestNucText0 = XRNAData.this.closestElementWithIndex(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(v0, nucText)),
-                nearestNucText1 = XRNAData.this.closestElementWithIndex(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(v1, nucText));
-            if (Math.abs(nearestNucText0.t1 - nearestNucText1.t1) > 1) {
-                this.basePairs.add(new Tuple2<>(nearestNucText0.t1, nearestNucText1.t1));
+            for (double scalar : Arrays.asList(2d, 2.5d, 3d, 3.5d, 5d)) {
+                nucBondLine = nucBondLine.scale(scalar);
+                Vector2
+                    v0 = new Vector2(nucBondLine.x0, nucBondLine.y0),
+                    v1 = new Vector2(nucBondLine.x1, nucBondLine.y1);
+                Tuple3<Text, Integer, Integer>
+                    nearestNucText0 = XRNAData.this.closestElementWithIndices(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(v0, nucText)),
+                    nearestNucText1 = XRNAData.this.closestElementWithIndices(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(v1, nucText));
+                // if (nucPairValidator.apply(new Tuple4<>(nearestNucText0, nearestNucText1, v0, v1))) {
+                if (Math.abs(totalIndexHelper.apply(nearestNucText0) - totalIndexHelper.apply(nearestNucText1)) > 1) {
+                    this.basePairs.add(new Tuple2<>(
+                        listIndexToNucleotideBaseIndexMap.get(nearestNucText0.t1) + nearestNucText0.t2,
+                        listIndexToNucleotideBaseIndexMap.get(nearestNucText1.t1) + nearestNucText1.t2
+                    ));
+                    break;
+                }
             }
         }
-        ArrayList<Tuple4<Text, Line, Text, Integer>>
+        ArrayList<LabelDatum>
             labelData = new ArrayList<>();
         for (Line labelLine : this.labelLines) {
             Line
@@ -146,22 +187,32 @@ public abstract class XRNAData {
                 nucleotideEndpoint = v0;
                 nearestLabelTextWithDistance = nearestLabelText1;
             }
-            Tuple2<Text, Integer>
-                nearestNucleotideText = XRNAData.this.closestElementWithIndex(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(nucleotideEndpoint, nucText));
+            Tuple3<Text, Integer, Integer>
+                nearestNucleotideText = XRNAData.this.closestElementWithIndices(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(nucleotideEndpoint, nucText));
             // Rectangle2D.Double
             //     nucBounds = XRNAData.getBounds(nearestNucleotideText.t0);
-            if (Math.abs(Integer.parseInt(nearestLabelTextWithDistance.t0.content) - nearestNucleotideText.t1) < 10) {
+            if (Math.abs(Integer.parseInt(nearestLabelTextWithDistance.t0.content) - nearestNucleotideText.t2) == 0) {
             // if ((nearestLabelTextWithDistance.t2 + 2d) <= 5d * Vector2.distance(new Vector2(nucBounds.getCenterX(), nucBounds.getCenterY()), nucleotideEndpoint)) {
-                labelData.add(new Tuple4<>(nearestLabelTextWithDistance.t0, nonscaledLabelLine, nearestNucleotideText.t0, nearestNucleotideText.t1));
-            } else {
+                labelData.add(new LabelDatum(
+                    nearestLabelTextWithDistance.t0,
+                    nearestNucleotideText.t0,
+                    nonscaledLabelLine,
+                    listIndexToNucleotideBaseIndexMap.get(nearestNucleotideText.t1),
+                    nearestNucleotideText.t2
+                ));
+            } /*else {
                 System.out.println("Error line: (" + nonscaledLabelLine.x0 + ", " + nonscaledLabelLine.y0 + ", " + nonscaledLabelLine.x1 + ", " + nonscaledLabelLine.y1 + ")");
-            }
+            }*/
         }
         HashMap<Integer, Integer>
             countIndexOffsetsMap = new HashMap<>();
-        for (Tuple4<Text, Line, Text, Integer> labelDatum : labelData) {
+        // for (Tuple4<Text, Line, Text, Integer> labelDatum : labelData) {
+        //     System.out.println("label content: " + labelDatum.t0.content + " " + labelDatum.t3);
+        // }
+        for (LabelDatum labelDatum : labelData) {
             int
-                indexOffset = Integer.parseInt(labelDatum.t0.content) - labelDatum.t3;
+                indexOffset = Integer.parseInt(labelDatum.label.content) - labelDatum.nucleotideIndex;
+            labelDatum.indexOffset = indexOffset;
             if (countIndexOffsetsMap.containsKey(indexOffset)) {
                 countIndexOffsetsMap.put(indexOffset, countIndexOffsetsMap.get(indexOffset) + 1);
             } else {
@@ -175,20 +226,36 @@ public abstract class XRNAData {
             int
                 indexOffset = indexOffsetEntry.getKey(),
                 indexOffsetCount = indexOffsetEntry.getValue();
+            System.out.println("indexOffset: " + indexOffset + " indexOffsetCount: " + indexOffsetCount);
             if (indexOffsetCount > maximumOffsetCount) {
                 maximumOffsetCount = indexOffsetCount;
                 mostCommonIndexOffset = indexOffset;
             }
         }
-        for (Tuple4<Text, Line, Text, Integer> labelDatum : labelData) {
+        for (LabelDatum labelDatum : labelData) {
             int
-                indexOffset = Integer.parseInt(labelDatum.t0.content) - labelDatum.t3;
-            labelDatum.t3 -= mostCommonIndexOffset - indexOffset;
-        }
-        for (Tuple4<Text, Line, Text, Integer> labelDatum : labelData) {
+                correctIndex = labelDatum.nucleotideSublistBaseIndex + labelDatum.nucleotideIndex - (mostCommonIndexOffset - labelDatum.indexOffset);
             Text
-                labelText = labelDatum.t0.copy(),
-                nucleotideText = labelDatum.t2.copy();
+                labelText = labelDatum.label.copy(),
+                nucleotideText = null;
+            if (labelDatum.indexOffset != mostCommonIndexOffset) {
+                int
+                    nucleotideSublistBaseIndex = 0;
+                for (ArrayList<Text> nucleotideTextSublist : this.nucleotideTexts) {
+                    int
+                        endIndex = nucleotideSublistBaseIndex + nucleotideTextSublist.size();
+                    if (endIndex >= correctIndex) {
+                        nucleotideText = nucleotideTextSublist.get(labelDatum.nucleotideIndex - 1);
+                    }
+                    nucleotideSublistBaseIndex = endIndex;
+                }
+                // System.out.println("\t" + labelDatum.label.content + " " + labelDatum.indexOffset);
+            } else {
+                nucleotideText = labelDatum.nucleotide;
+            }
+            nucleotideText = nucleotideText.copy();
+            Line
+                labelLine = labelDatum.line.copy();
             Rectangle2D.Double
                 nucBounds = getBounds(nucleotideText),
                 labelBounds = getBounds(labelText);
@@ -197,98 +264,36 @@ public abstract class XRNAData {
                 nucCenterY = nucBounds.getCenterY(),
                 labelCenterX = labelBounds.getCenterX(),
                 labelCenterY = labelBounds.getCenterY();
-            Line
-                labelLine = labelDatum.t1.copy();
-            labelText.x = labelCenterX - nucCenterX;
+            Style
+                style = labelDatum.label.style;
+            Font
+                font = new Font(style.fontFamily, Font.PLAIN, (int)Math.round(style.fontSize));
+            FontMetrics
+                fontMetrics = ComplexParentFrame.frame.getFontMetrics(font);
+
+            int
+                labelWidth = fontMetrics.stringWidth(labelDatum.label.content),
+                nucWidth = fontMetrics.stringWidth(labelDatum.nucleotide.content);
+            double
+                nucHeight = labelDatum.nucleotide.style.fontSize;
+            // labelCenterX -= labelWidth / 2d;
+
+            // labelText.x = labelCenterX - nucCenterX;
+            // labelText.y = -(labelCenterY - nucCenterY);
+            // labelLine.x0 = labelLine.x0 - nucCenterX;
+            // labelLine.y0 = -(labelLine.y0 - nucCenterY);
+            // labelLine.x1 = labelLine.x1 - nucCenterX;
+            // labelLine.y1 = -(labelLine.y1 - nucCenterY);
+            labelText.x = labelCenterX - nucCenterX - labelWidth / 4d;
             labelText.y = -(labelCenterY - nucCenterY);
-            labelLine.x0 = labelLine.x0 - nucCenterX;
-            labelLine.y0 = -(labelLine.y0 - nucCenterY);
-            labelLine.x1 = labelLine.x1 - nucCenterX;
-            labelLine.y1 = -(labelLine.y1 - nucCenterY);
+            labelLine.x0 = labelLine.x0 - nucCenterX + nucWidth / 2d;
+            labelLine.y0 = -(labelLine.y0 - nucCenterY) + nucHeight / 4d;
+            labelLine.x1 = labelLine.x1 - nucCenterX + nucWidth / 2d;
+            labelLine.y1 = -(labelLine.y1 - nucCenterY) + nucHeight / 4d;
             
-            this.labels.add(new Tuple3<>(labelText, labelLine, labelDatum.t3));
+            this.labels.add(new Tuple3<>(labelText, labelLine, correctIndex));
         }
         this.invertYCoordinates();
-
-        // for (Line line : this.labelLines) {
-        //     double
-        //         magnitude = line.magnitude();
-        //     if (magnitude > EPSILON) {
-        //         Vector2
-        //             center = line.center(),
-        //             direction = Vector2.normalize(Vector2.subtract(new Vector2(line.x0, line.y0), new Vector2(line.x1, line.y1)));
-        //         double
-        //             maximumTextMagnitude = magnitude * 2d;
-        //         ArrayList<Tuple2<Text, Integer>>
-        //             nearbyNucleotideTextsWithIndices = new ArrayList<>();
-        //         ArrayList<Text>
-        //             nearbyLabelTexts = new ArrayList<>();
-        //         for (int i = 0; i < this.nucleotideTexts.size(); i++) {
-        //             Text
-        //                 nucleotideText = this.nucleotideTexts.get(i);
-        //             double
-        //                 textMagnitude = Line.magnitude(center.x, center.y, nucleotideText.x, nucleotideText.y);
-        //             if (textMagnitude <= maximumTextMagnitude) {
-        //                 nearbyNucleotideTextsWithIndices.add(new Tuple2<>(nucleotideText, i + 1));
-        //             }
-        //         }
-        //         for (Text labelText : this.labelTexts) {
-        //             double
-        //                 textMagnitude = Line.magnitude(center.x, center.y, labelText.x, labelText.y);
-        //             if (textMagnitude <= maximumTextMagnitude) {
-        //                 nearbyLabelTexts.add(labelText);
-        //             }
-        //         }
-        //         if (nearbyNucleotideTextsWithIndices.size() > 0 && nearbyLabelTexts.size() > 0) {
-        //             Tuple2<Text, Integer>
-        //                 nucleotideTextWithIndex = null;
-        //             Text
-        //                 labelText = null;
-        //             if (nearbyNucleotideTextsWithIndices.size() == 1) {
-        //                 nucleotideTextWithIndex = nearbyNucleotideTextsWithIndices.get(0);
-        //                 labelText = findMostDirectLabelText(center, direction, nearbyLabelTexts).t0;
-        //             } else if (nearbyLabelTexts.size() == 1) {
-        //                 labelText = nearbyLabelTexts.get(0);
-        //                 boolean
-        //                     dotProductIsNegative = Vector2.dot(direction, Vector2.normalize(Vector2.subtract(new Vector2(labelText.x, labelText.y), center))) < 0;
-        //                 nucleotideTextWithIndex = findMostDirectNucleotideTextWithIndex();
-        //             } else {
-        //                 Tuple2<Text, Boolean>
-        //                     nearbyLabelTextData = findMostDirectLabelText(center, direction, nearbyLabelTexts);
-        //                 if (nearbyLabelTextData.t1) {
-        //                     double
-        //                         maximumDotProduct = -1d;
-        //                     for (Tuple2<Text, Integer> nearbyNucleotideTextWithIndex : nearbyNucleotideTextsWithIndices) {
-        //                         Text
-        //                             nearbyNucleotideText = nearbyNucleotideTextWithIndex.t0;
-        //                         double
-        //                             dotProduct = Vector2.dot(direction, Vector2.normalize(Vector2.subtract(new Vector2(nearbyNucleotideText.x, nearbyNucleotideText.y), center)));
-        //                         if (dotProduct > maximumDotProduct) {
-        //                             maximumDotProduct = dotProduct;
-        //                             nucleotideTextWithIndex = nearbyNucleotideTextWithIndex;
-        //                         }
-        //                     }
-        //                 } else {
-        //                     double
-        //                         minimumDotProduct = -1d;
-        //                     for (Tuple2<Text, Integer> nearbyNucleotideTextWithIndex : nearbyNucleotideTextsWithIndices) {
-        //                         Text
-        //                             nearbyNucleotideText = nearbyNucleotideTextWithIndex.t0;
-        //                         double
-        //                             dotProduct = Vector2.dot(direction, Vector2.normalize(Vector2.subtract(new Vector2(nearbyNucleotideText.x, nearbyNucleotideText.y), center)));
-        //                         if (dotProduct < minimumDotProduct) {
-        //                             minimumDotProduct = dotProduct;
-        //                             nucleotideTextWithIndex = nearbyNucleotideTextWithIndex;
-        //                         }
-        //                     }
-        //                 }
-        //             }
-        //             labelData.add(new Tuple4<>(labelText, line, nucleotideTextWithIndex.t0, nucleotideTextWithIndex.t1));
-        //         }
-        //     } else {
-        //         throw new UnsupportedOperationException("Label lines of zero length are currently unsupported.");
-        //     }
-        // }
     }
 
     private <T> T closestElement(Iterable<T> iterable, Function<T, Double> distanceMetric) {
@@ -327,6 +332,46 @@ public abstract class XRNAData {
         return new Tuple3<>(closestElement, closestElementIndex, minimumDistance);
     }
 
+    private <T> Tuple3<T, Integer, Integer> closestElementWithIndices(Iterable<? extends Iterable<T>> iterable, Function<T, Double> distanceMetric) {
+        Tuple4<T, Integer, Integer, Double>
+            closestElementWithIndicesAndDistance = closestElementWithIndicesAndDistance(iterable, distanceMetric);
+        return new Tuple3<>(closestElementWithIndicesAndDistance.t0, closestElementWithIndicesAndDistance.t1, closestElementWithIndicesAndDistance.t2);
+    }
+
+    private <T> Tuple4<T, Integer, Integer, Double> closestElementWithIndicesAndDistance(Iterable<? extends Iterable<T>> iterable, Function<T, Double> distanceMetric) {
+        Iterator<? extends Iterable<T>>
+            iteratorOfIterables = iterable.iterator();
+        double
+            minimumDistance = Double.MAX_VALUE;
+        int
+            minimumDistanceIterableIndex = -1,
+            minimumDistanceIndex = -1,
+            iterableIndex = 0;
+        T
+            closestElement = null;
+        while (iteratorOfIterables.hasNext()) {
+            Iterator<T>
+                iterator = iteratorOfIterables.next().iterator();
+            int
+                index = 1;
+            while (iterator.hasNext()) {
+                T
+                    next = iterator.next();
+                double
+                    distance = distanceMetric.apply(next);
+                if (distance < minimumDistance) {
+                    minimumDistance = distance;
+                    minimumDistanceIndex = index;
+                    minimumDistanceIterableIndex = iterableIndex;
+                    closestElement = next;
+                }
+                index++;
+            }
+            iterableIndex++;
+        }
+        return new Tuple4<>(closestElement, minimumDistanceIterableIndex, minimumDistanceIndex, minimumDistance);
+    }
+
     public void printToXRNAFile(String path) {
         this.printToXRNAFile(new File(path));
     }
@@ -338,38 +383,45 @@ public abstract class XRNAData {
             double
                 meanX = 0d,
                 meanY = 0d;
-            for (Text text : this.nucleotideTexts) {
-                meanX += text.x;
-                meanY += text.y;
+            int
+                numNucleotides = 0;
+            for (ArrayList<Text> nucleotideTextsSublist : this.nucleotideTexts) {
+                numNucleotides += nucleotideTextsSublist.size();
+                for (Text nucleotide : nucleotideTextsSublist) {
+                    meanX += nucleotide.x;
+                    meanY += nucleotide.y;
+                }
             }
-            meanX /= this.nucleotideTexts.size();
-            meanY /= this.nucleotideTexts.size();
+            meanX /= numNucleotides;
+            meanY /= numNucleotides;
             String
                 complexName = "Unknown",
                 fileString = "<ComplexDocument Name='" + complexName + "'>\n<SceneNodeGeom CenterX='" + String.format(DOUBLE_FORMAT_STRING, -meanX) + "' CenterY='" + String.format(DOUBLE_FORMAT_STRING, -meanY) + "' Scale='1.0' />\n<Complex Name='" + complexName + "'>\n<RNAMolecule Name='" + complexName + "'>\n<NucListData StartNucID='1' DataType='NucChar.XPos.YPos'>\n";
-            for (Text nucleotide : this.nucleotideTexts) {
-                fileString += nucleotide.content + " " + String.format(DOUBLE_FORMAT_STRING, nucleotide.x) + " " + String.format(DOUBLE_FORMAT_STRING, nucleotide.y) + "\n";
+            for (ArrayList<Text> nucleotideTextsSublist : this.nucleotideTexts) {
+                for (Text nucleotide : nucleotideTextsSublist) {
+                    fileString += nucleotide.content + " " + String.format(DOUBLE_FORMAT_STRING, nucleotide.x) + " " + String.format(DOUBLE_FORMAT_STRING, nucleotide.y) + "\n";
+                }
             }
             fileString += "</NucListData>\n";
-            int
-                numNucleotides = this.nucleotideTexts.size();
             fileString += "<Nuc RefIDs='1-" + numNucleotides + "' Color='0' FontID='0' FontSize='" + DEFAULT_FONT_SIZE + "' />\n";
             HashMap<Style, ArrayList<Integer>>
                 map = new HashMap<>();
             int
                 nucleotideIndex = 1;
-            for (Text nucleotideText : this.nucleotideTexts) {
-                Style
-                    style = nucleotideText.style;
-                ArrayList<Integer>
-                    indices;
-                if (map.containsKey(style)) {
-                    indices = map.get(style);
-                } else {
-                    indices = new ArrayList<Integer>();
-                    map.put(style, indices);
+            for (ArrayList<Text> nucleotideTextsSublist : this.nucleotideTexts) {
+                for (Text nucleotideText : nucleotideTextsSublist) {
+                    Style
+                        style = nucleotideText.style;
+                    ArrayList<Integer>
+                        indices;
+                    if (map.containsKey(style)) {
+                        indices = map.get(style);
+                    } else {
+                        indices = new ArrayList<Integer>();
+                        map.put(style, indices);
+                    }
+                    indices.add(nucleotideIndex++);
                 }
-                indices.add(nucleotideIndex++);
             }
             ArrayList<String>
                 toBeAppended = new ArrayList<>();
@@ -429,118 +481,98 @@ public abstract class XRNAData {
         }
     }
 
-    public void display() {
-        JFrame
-            frame = new JFrame();
-        JPanel
-            panel = new JPanel() {
-                @Override
-                public void paintComponent(Graphics g) {
-                    super.paintComponent(g);
-                    Graphics2D
-                        g2D = (Graphics2D)g;
-                    g.setColor(Color.WHITE);
-                    g2D.scale(2d, 2d);
-                    ArrayList<Text>
-                        nucTexts = XRNAData.this.inputNucleotideTexts();
-                    for (ArrayList<Text> texts : Arrays.asList(nucTexts, XRNAData.this.inputLabelTexts(), XRNAData.this.inputHelixTexts())) {
-                        for (Text text : texts) {
-                            Style
-                                style = text.style;
-                            Tuple2<Rectangle2D.Double, Font>
-                                boundsAndFont = getBoundsAndFont(text);
-                            Rectangle2D.Double
-                                bounds = boundsAndFont.t0;
-                            g2D.setColor(new Color(255, 0, 0, 255));
-                            g2D.setStroke(new BasicStroke(0.1f));
-                            g2D.draw(boundsAndFont.t0);
-                            g2D.setColor(Color.WHITE);
-                            double
-                                radius = 1d,
-                                diameter = 2d * radius;
-                            // g2D.draw(new Ellipse2D.Double(bounds.getCenterX() - radius, bounds.getCenterY() - radius, diameter, diameter));
+    // public void display() {
+    //     JFrame
+    //         frame = new JFrame();
+    //     JPanel
+    //         panel = new JPanel() {
+    //             @Override
+    //             public void paintComponent(Graphics g) {
+    //                 super.paintComponent(g);
+    //                 Graphics2D
+    //                     g2D = (Graphics2D)g;
+    //                 g.setColor(Color.WHITE);
+    //                 g2D.scale(2d, 2d);
+    //                 ArrayList<ArrayList<Text>>
+    //                     nucTexts = XRNAData.this.inputNucleotideTexts();
+    //                 for (ArrayList<Text> texts : Arrays.asList(nucTexts, XRNAData.this.inputLabelTexts(), XRNAData.this.inputHelixTexts())) {
+    //                     for (Text text : texts) {
+    //                         Style
+    //                             style = text.style;
+    //                         Tuple2<Rectangle2D.Double, Font>
+    //                             boundsAndFont = getBoundsAndFont(text);
+    //                         Rectangle2D.Double
+    //                             bounds = boundsAndFont.t0;
+    //                         g2D.setColor(new Color(255, 0, 0, 255));
+    //                         g2D.setStroke(new BasicStroke(0.1f));
+    //                         g2D.draw(boundsAndFont.t0);
+    //                         g2D.setColor(Color.WHITE);
+    //                         double
+    //                             radius = 1d,
+    //                             diameter = 2d * radius;
+    //                         // g2D.draw(new Ellipse2D.Double(bounds.getCenterX() - radius, bounds.getCenterY() - radius, diameter, diameter));
 
-                            g2D.setFont(boundsAndFont.t1);
-                            g2D.setColor(new Color(255 - style.fill.getRed(), 255 - style.fill.getGreen(), 255 - style.fill.getBlue()));
-                            g2D.drawString(text.content, (float)text.x, (float)text.y);
-                        }
-                    }
-                    ArrayList<Line>
-                        nucBondLines = XRNAData.this.inputNucleotideLines();
-                    for (ArrayList<Line> lines : Arrays.asList(nucBondLines, XRNAData.this.inputLabelLines())) {
-                        for (Line line : lines) {
-                            line = line.scale(1.5d);
-                            Style
-                                style = line.style;
-                            g2D.setColor(new Color(255 - style.stroke.getRed(), 255 - style.stroke.getGreen(), 255 - style.stroke.getBlue()));
-                            g2D.setStroke(new BasicStroke((float)style.strokeWidth.doubleValue()));
-                            // g2D.draw(new Line2D.Double(line.x0, line.y0, line.x1, line.y1));
-                        }
-                    }
+    //                         g2D.setFont(boundsAndFont.t1);
+    //                         g2D.setColor(new Color(255 - style.fill.getRed(), 255 - style.fill.getGreen(), 255 - style.fill.getBlue()));
+    //                         g2D.drawString(text.content, (float)text.x, (float)text.y);
+    //                     }
+    //                 }
+    //                 ArrayList<Line>
+    //                     nucBondLines = XRNAData.this.inputNucleotideLines();
+    //                 for (ArrayList<Line> lines : Arrays.asList(nucBondLines, XRNAData.this.inputLabelLines())) {
+    //                     for (Line line : lines) {
+    //                         line = line.scale(1.5d);
+    //                         Style
+    //                             style = line.style;
+    //                         g2D.setColor(new Color(255 - style.stroke.getRed(), 255 - style.stroke.getGreen(), 255 - style.stroke.getBlue()));
+    //                         g2D.setStroke(new BasicStroke((float)style.strokeWidth.doubleValue()));
+    //                         // g2D.draw(new Line2D.Double(line.x0, line.y0, line.x1, line.y1));
+    //                     }
+    //                 }
 
-                    for (Line nucBondLine : nucBondLines) {
-                        nucBondLine = nucBondLine.scale(2d);
-                        g2D.setColor(Color.ORANGE);
-                        g2D.draw(new Line2D.Double(nucBondLine.x0, nucBondLine.y0, nucBondLine.x1, nucBondLine.y1));
-                        Vector2
-                            v0 = new Vector2(nucBondLine.x0, nucBondLine.y0),
-                            v1 = new Vector2(nucBondLine.x1, nucBondLine.y1);
-                        BiFunction<Vector2, Text, Double>
-                            distanceMetric =  (Vector2 v, Text nucText) -> {
-                                return Vector2.distance(new Vector2(nucText.x, nucText.y), v);
-                            };
-                        Tuple2<Text, Integer>
-                            nearestNucText0 = XRNAData.this.closestElementWithIndex(nucTexts, (Text nucText) -> distanceMetric.apply(v0, nucText)),
-                            nearestNucText1 = XRNAData.this.closestElementWithIndex(nucTexts, (Text nucText) -> distanceMetric.apply(v1, nucText));
-                        g2D.setColor(Color.RED);
-                        Rectangle2D.Double
-                            bounds0 = XRNAData.getBounds(nearestNucText0.t0),
-                            bounds1 = XRNAData.getBounds(nearestNucText1.t0);
-                        g2D.draw(new Line2D.Double(bounds0.getCenterX(), bounds0.getCenterY(), v0.x, v0.y));
-                        g2D.setColor(Color.GREEN);
-                        g2D.draw(new Line2D.Double(bounds1.getCenterX(), bounds1.getCenterY(), v1.x, v1.y));
-                    }
-                }
-            };
-        panel.setBackground(Color.BLACK);
-        Dimension
-            screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        frame.add(panel);
-        frame.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent event) {
-                switch (event.getKeyCode()) {
-                    case KeyEvent.VK_ESCAPE:
-                        System.exit(0);
-                        break;
-                }
-            }
-        });
-        frame.setSize(screenSize);
-        frame.setUndecorated(true);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
-    }
-
-    public static Tuple2<Text, Boolean> findMostDirectLabelText(Vector2 center, Vector2 direction, ArrayList<Text> nearbyLabelTexts) {
-        double
-            maximumDotProductMagnitude = 0d;
-        boolean
-            maximumMagnitudeDotProductIsNegative = false;
-        Text
-            labelText = null;
-        for (Text nearbyLabelText : nearbyLabelTexts) {
-            double
-                dotProduct = Vector2.dot(direction, Vector2.normalize(Vector2.subtract(new Vector2(nearbyLabelText.x, nearbyLabelText.y), center))),
-            dotProductMagnitude = Math.abs(dotProduct);
-            if (dotProductMagnitude > maximumDotProductMagnitude) {
-                maximumDotProductMagnitude = dotProductMagnitude;
-                maximumMagnitudeDotProductIsNegative = dotProduct < 0;
-                labelText = nearbyLabelText;
-            }
-        }
-        return new Tuple2<>(labelText, maximumMagnitudeDotProductIsNegative);
-    }
+    //                 for (Line nucBondLine : nucBondLines) {
+    //                     nucBondLine = nucBondLine.scale(2d);
+    //                     g2D.setColor(Color.ORANGE);
+    //                     g2D.draw(new Line2D.Double(nucBondLine.x0, nucBondLine.y0, nucBondLine.x1, nucBondLine.y1));
+    //                     Vector2
+    //                         v0 = new Vector2(nucBondLine.x0, nucBondLine.y0),
+    //                         v1 = new Vector2(nucBondLine.x1, nucBondLine.y1);
+    //                     BiFunction<Vector2, Text, Double>
+    //                         distanceMetric =  (Vector2 v, Text nucText) -> {
+    //                             return Vector2.distance(new Vector2(nucText.x, nucText.y), v);
+    //                         };
+    //                     Tuple2<Text, Integer>
+    //                         nearestNucText0 = XRNAData.this.closestElementWithIndex(nucTexts, (Text nucText) -> distanceMetric.apply(v0, nucText)),
+    //                         nearestNucText1 = XRNAData.this.closestElementWithIndex(nucTexts, (Text nucText) -> distanceMetric.apply(v1, nucText));
+    //                     g2D.setColor(Color.RED);
+    //                     Rectangle2D.Double
+    //                         bounds0 = XRNAData.getBounds(nearestNucText0.t0),
+    //                         bounds1 = XRNAData.getBounds(nearestNucText1.t0);
+    //                     g2D.draw(new Line2D.Double(bounds0.getCenterX(), bounds0.getCenterY(), v0.x, v0.y));
+    //                     g2D.setColor(Color.GREEN);
+    //                     g2D.draw(new Line2D.Double(bounds1.getCenterX(), bounds1.getCenterY(), v1.x, v1.y));
+    //                 }
+    //             }
+    //         };
+    //     panel.setBackground(Color.BLACK);
+    //     Dimension
+    //         screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+    //     frame.add(panel);
+    //     frame.addKeyListener(new KeyAdapter() {
+    //         @Override
+    //         public void keyPressed(KeyEvent event) {
+    //             switch (event.getKeyCode()) {
+    //                 case KeyEvent.VK_ESCAPE:
+    //                     System.exit(0);
+    //                     break;
+    //             }
+    //         }
+    //     });
+    //     frame.setSize(screenSize);
+    //     frame.setUndecorated(true);
+    //     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    //     frame.setVisible(true);
+    // }
 
     public static Rectangle2D.Double getBounds(Text text) {
         return getBoundsAndFont(text).t0;
@@ -571,12 +603,32 @@ public abstract class XRNAData {
         DEFAULT_FONT_FAMILY = Font.DIALOG,
         DEFAULT_LABEL = "";
 
-    public static final int
-        DEFAULT_FONT_SIZE = 8;
+    public static int
+        DEFAULT_FONT_SIZE = 4;
 
     public static final Color
         DEFAULT_FONT_FILL = Color.BLACK,
         DEFAULT_STROKE = Color.BLACK;
+
+    private static class LabelDatum {
+        private Text
+            label,
+            nucleotide;
+        private Line
+            line;
+        private int
+            nucleotideSublistBaseIndex,
+            nucleotideIndex,
+            indexOffset;
+
+        private LabelDatum(Text label, Text nucleotide, Line line, int nucleotideSublistBaseIndex, int nucleotideIndex) {
+            this.label = label;
+            this.nucleotide = nucleotide;
+            this.line = line;
+            this.nucleotideSublistBaseIndex = nucleotideSublistBaseIndex;
+            this.nucleotideIndex = nucleotideIndex;
+        }
+    }
 
     public static class Style {
         public Double
@@ -668,7 +720,8 @@ public abstract class XRNAData {
             x,
             y;
         public String
-            content;
+            content,
+            classLabel = "";
         public Style
             style;
 
@@ -681,6 +734,12 @@ public abstract class XRNAData {
         public Text(double x, double y, String content, Style style) {
             this(x, y, content);
             this.style = style;
+        }
+
+        public Text(double x, double y, String content, Style style, String classLabel) {
+            this(x, y, content);
+            this.style = style;
+            this.classLabel = classLabel;
         }
         
         public Text copy() {
@@ -696,7 +755,9 @@ public abstract class XRNAData {
             y1;
         public Style
             style;
-        
+        public String
+            classLabel = "";
+
         public Line(double x0, double y0, double x1, double y1) {
             this.x0 = x0;
             this.y0 = y0;
@@ -707,6 +768,11 @@ public abstract class XRNAData {
         public Line(double x0, double y0, double x1, double y1, Style style) {
             this(x0, y0, x1, y1);
             this.style = style;
+        }
+
+        public Line(double x0, double y0, double x1, double y1, Style style, String classLabel) {
+            this(x0, y0, x1, y1, style);
+            this.classLabel = classLabel;
         }
 
         public Vector2 center() {

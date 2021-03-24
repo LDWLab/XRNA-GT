@@ -21,12 +21,15 @@ public class STRParser extends XRNAData {
         STRParser
             strParser = new STRParser(inputSTRFilePath);
         // strParser.printToXRNAFile(outputXRNAFilePath);
-        strParser.display();
+        // strParser.display();
     }
 
     @Override
-    public ArrayList<Text> inputNucleotideTexts() {
-        return this.nucleotideTexts;
+    public ArrayList<ArrayList<Text>> inputNucleotideTexts() {
+        ArrayList<ArrayList<Text>>
+            inputNucleotideTexts = new ArrayList<>();
+        inputNucleotideTexts.add(this.nucleotideTexts);
+        return new ArrayList<>();
     }
 
     @Override
