@@ -75,5 +75,12 @@ and provides export/import functionality between some of them.
 
 The executable (jar) is located at XRNA\xrna-GT.jar. It was compiled using AdoptOpenJDK 16, an open-source JDK alternative.	
 
+To run  XRNA-GT.jar, the user must have a version of Java no older than Java 14 installed.
+If the upgrade is required, the newest version of OpenJdk is available at  https://adoptopenjdk.net/
 
+To execute XRNA-GT.jar on mac or linux type, users must use the command-line interface (terminal) and type the following command:
+	java -jar XRNA-GT.jar
+
+To execute XRNA-GT.jar on windows, please click the app icon. Alternatively, Windows user may use command-line option, executing XRNA using Powershell:
+	java -jar XRNA-GT.jar
 
