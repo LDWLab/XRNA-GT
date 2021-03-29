@@ -73,7 +73,7 @@ and provides export/import functionality between some of them.
 * Placement of label line segments is incorrect
 	* This bug fix is in progress.
 
-The executable (jar) is located at XRNA\xrna-GT.jar. It was compiled using AdoptOpenJDK 14, an open-source JDK alternative.	
+The executable (jar) is located at XRNA\xrna-GT.jar. It was compiled using AdoptOpenJDK 16, an open-source JDK alternative.	
 
 
 
