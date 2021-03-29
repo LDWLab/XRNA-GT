@@ -48,6 +48,7 @@ and provides export/import functionality between some of them.
 					* print the nucleotide position and character (A, U, C, or G) to an SVG output file using the PrintWriter
 					* print the associated label(s)' text and line to an output SVG file using the PrintWriter
 * Button-facilitated export of XRNA data to Traveler's TR format ();
+* Button-facilitated export of XRNA data to BPSeq format;
 * import of SVG-format files to XRNA data (backed by .XRNA files).
 	* The algorithms used to correct imperfect SVG data to programmatically ascertain the intention of the creator of the imported SVG files are intricate and tailor-made targeting a plethora of SVG formats.
 	* These algorithms are mainly geometric; they perform the following calculations:
