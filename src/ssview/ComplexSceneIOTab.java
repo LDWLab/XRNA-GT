@@ -1186,6 +1186,83 @@ buildGui(Color guiBGColor, int panelW, int panelH)
 	});
 	controlBtPanel.add(writeSVGBtn);
     
+	JButton writeBPSeq = this.getNewViewButton("Save in BPSeq Format");
+	writeBPSeq.addActionListener(event -> {
+		try {
+			if (complexSceneView.getComplexScene() == null) { 
+				alert("Display Secondary Structure First");
+				return;
+			}
+			genFileChooser.setFileFilter(genWriteFileFilterBPSeq);
+			if (complexSceneView.getCurrentInputFile() == null) { complexSceneView.setCurrentInputFile(new File("new_structure.bpseq")); }
+			File cur;
+			String curName;
+			if (!(cur = complexSceneView.getCurrentInputFile()).isDirectory() && ((curName = cur.getName()).endsWith(".xrna") || curName.endsWith(".xrna"))) {
+				File newFile = new File(curName.substring(0, curName.lastIndexOf('.')) + ".bpseq");
+				genFileChooser.setSelectedFile(newFile);
+				complexSceneView.setCurrentInputFile(newFile);
+			} else if (genFileChooser.getSelectedFile() == null && ((curName = (cur = complexSceneView.getCurrentInputFile()).getName()).endsWith(".ss") || curName.endsWith(".ps"))) {
+				File newFile = new File(curName.substring(0, curName.lastIndexOf('.')) + ".bpseq");
+				genFileChooser.setSelectedFile(newFile);
+				complexSceneView.setCurrentInputFile(newFile);
+			}
+		} catch (Exception ex) { handleException("Exception in ComplexSceneIOTab.writeBPSeqBtn", ex, 101); } 
+		try {
+			boolean
+				overwrite = false,
+				running = true;
+			while (running) {
+				if (genFileChooser != null) {
+					File selectedFile = null;
+					if (!overwrite) {
+						int returnVal = genFileChooser.showSaveDialog(complexSceneView);
+						if (returnVal == JFileChooser.CANCEL_OPTION) {
+							genFileChooser.resetChoosableFileFilters();
+							return;
+						}
+						if (returnVal == JFileChooser.ERROR_OPTION) { debug("ERROR IN OPENING FILE"); }
+						if (returnVal != JFileChooser.APPROVE_OPTION) { return; }
+						selectedFile = genFileChooser.getSelectedFile();
+					}
+					if (selectedFile != null) { 
+						if (selectedFile.exists() && !overwrite) {
+							switch (JOptionPane.showOptionDialog(
+								complexSceneView,
+								new Object[] {new JLabel("File Exists"), new JLabel("Overwrite: " + selectedFile.getName() + "?"), null},
+								"File Exists",
+								JOptionPane.OK_CANCEL_OPTION,
+								JOptionPane.PLAIN_MESSAGE,
+								null,
+								new String[] {"Yes", "Cancel"},
+								"Yes")) {
+								case 0:
+									overwrite = true;
+									try { selectedFile.delete(); }
+									catch (Exception ex) { alert("Error, file not overwritten:\n" + ex); }
+									
+									complexSceneView.complexSceneOutFile = selectedFile;
+									if (selectedFile.getName().endsWith(".bpseq")) {
+										running = this.printBPSeq(selectedFile, running);
+									} else {
+										alert("Not a valid extension.\nNeed to change extension to .bpseq");
+									}
+									break;
+								case 1:
+									running = false;
+									break;
+							}
+						} else {
+							complexSceneView.complexSceneOutFile = selectedFile;
+							running = this.printBPSeq(selectedFile, running);
+						}
+					}
+				}
+			}
+		} catch (Exception ex) { handleException("Exception in genFileChooser.showSaveDialog:", ex, 101); }
+		genFileChooser.resetChoosableFileFilters();
+	});
+	controlBtPanel.add(writeBPSeq);
+
 	controlBtPanelScrollPane = new JScrollPane(controlBtPanel,
 		JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 		JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -1209,6 +1286,19 @@ private boolean printSVG(File selected, boolean running) {
 		}
 		running = false;
 	} else { alert("Not a valid extension.\nNeed to change extension to .svg"); }
+	return running;
+}
+
+private boolean printBPSeq(File selected, boolean running) {
+	if (selected.getName().endsWith(".bpseq")) {
+		try {
+			complexSceneView.runWriteBPSeqBt();
+		} catch (Exception ex) {
+			alert("Error, file not written:\n" + ex);
+			handleException("Exception in ComplexSceneIO.WriteBPSeq:", ex, 101);
+		}
+		running = false;
+	} else { alert("Not a valid extension.\nNeed to change extension to .bpseq"); }
 	return running;
 }
 

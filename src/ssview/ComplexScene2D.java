@@ -383,6 +383,21 @@ public void printComplexSVG(PrintWriter outFile) throws Exception {
 //	}
 }
 
+@Override
+public void printComplexBPSeq(PrintWriter outFile) throws Exception {
+	boolean printedFlag = false;
+	for (int complexID = 0; complexID < this.getItemCount(); complexID++) {
+		Object obj = this.getItemAt(complexID);
+		if (obj != null) {
+			if (printedFlag) {
+				throw new RuntimeException("BPSeq file unsupported for multiple-polymer datasets");
+			}
+			((ComplexCollection)obj).printComplexBPSeq(outFile);
+			printedFlag = true;
+		}
+	}
+}
+
 public ComplexScene2D
 getComplexSceneFromParse()
 throws Exception

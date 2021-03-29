@@ -2261,6 +2261,27 @@ public void printComplexSVG(PrintWriter out, LinkedList<Nuc2D> nucleotides, doub
 	}
 }
 
+@Override
+public void printComplexBPSeq(PrintWriter out, LinkedList<Nuc2D> nucleotides) throws Exception {
+	Vector
+		delineators = this.getItemListDelineators();
+	if (delineators != null && delineators.size() > 0) {
+		SSData2D
+			sstr = ((Nuc2D)delineators.elementAt(0)).getParentSSData2D();
+		if (sstr != null) {
+			for (int i = 1; i < delineators.size(); i += 2) {
+				Nuc2D
+					nuc0 = (Nuc2D)delineators.elementAt(i - 1),
+					nuc1 = (Nuc2D)delineators.elementAt(i);
+				int
+					nuc1ID = nuc1.getID();
+				for (int nucID = nuc0.getID(); nucID <= nuc1ID; nucID++) {
+					nucleotides.add(sstr.getNuc2DAt(nucID));
+				}
+			}
+		}
+	}
+}
 
 public void scaleCSV() throws Exception {
 	double maxY = 0;

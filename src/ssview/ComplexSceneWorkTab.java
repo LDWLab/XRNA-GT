@@ -122,6 +122,7 @@ protected GenFileFilter genWriteFileFilter = null;
 protected GenFileFilter genWriteFileFilterCSV = null;
 protected GenFileFilter genWriteFileFilterSVG = null;
 protected GenFileFilter genWriteFileFilterTR = null;
+protected GenFileFilter genWriteFileFilterBPSeq = null;
 
 public void
 setParentDrawObjectView(DrawObjectView parentDrawObjectView)
@@ -139,6 +140,7 @@ throws Exception
 	genWriteFileFilterCSV = complexSceneView.genWriteFileFilterCSV;
 	genWriteFileFilterSVG = complexSceneView.genWriteFileFilterSVG;
 	genWriteFileFilterTR = complexSceneView.genWriteFileFilterTR;
+	genWriteFileFilterBPSeq = complexSceneView.genWriteFileFilterBPSeq;
 }
 
 public void

@@ -838,6 +838,10 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		genWriteFileFilterTR.addExtension("tr");
 		genWriteFileFilterTR.setDescription("RiboVision TR file");
 
+		genWriteFileFilterBPSeq = new GenFileFilter();
+		genWriteFileFilterBPSeq.addExtension("bpseq");
+		genWriteFileFilterBPSeq.setDescription("RiboVision BPSeq file");
+
 		stopBt = new JButton();
 		stopBt.setText("Stop XRNA");
 		stopBt.setActionCommand("Stop");
@@ -1325,6 +1329,10 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		return this.runWriteSVGBt(complexSceneOutFile);
 	}
 
+	public boolean runWriteBPSeqBt() throws Exception {
+		return this.runWriteBPSeqBt(complexSceneOutFile);
+	}
+
 	public boolean runWriteXMLBt(String fileName) throws Exception {
 		return (this.runWriteXMLBt(new File(fileName)));
 	}
@@ -1417,6 +1425,23 @@ public class ComplexSceneView extends DrawObjectView implements Printable, Adjus
 		}
 		try {
 			this.getComplexScene().printComplexSVG(outFile);
+		} catch (java.io.FileNotFoundException ex) {
+			alert("Can't find file: " + outFile.getName() + "\n" + ex);
+			return false;
+		}
+		return true;
+	}
+
+	public boolean runWriteBPSeqBt(File outFile) throws Exception {
+		if (outFile == null) {
+			return false;
+		}
+		if (outFile.exists() && !outFile.canWrite()) {
+			alert("Can't write" + outFile.getName() + " ; Need to set writeable");
+			return false;
+		}
+		try {
+			this.getComplexScene().printComplexBPSeq(outFile);
 		} catch (java.io.FileNotFoundException ex) {
 			alert("Can't find file: " + outFile.getName() + "\n" + ex);
 			return false;

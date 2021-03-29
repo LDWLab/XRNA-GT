@@ -53,6 +53,7 @@ public GenFileFilter	genWriteFileFilter = null;
 public GenFileFilter	genWriteFileFilterCSV = null;
 public GenFileFilter	genWriteFileFilterSVG = null;
 public GenFileFilter    genWriteFileFilterTR = null;
+public GenFileFilter    genWriteFileFilterBPSeq = null;
 
 public JColorChooser	colorChooser = null;
 public FontChooser		fontChooser = null;

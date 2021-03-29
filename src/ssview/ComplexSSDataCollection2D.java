@@ -513,6 +513,34 @@ public void printComplexSVG(PrintWriter outFile) throws Exception {
 //	out.println("</svg>");
 }
 
+@Override
+public void printComplexBPSeq(PrintWriter outFile) throws Exception {
+	if (this.getItemCount() > 1) {
+		throw new RuntimeException("BPSeq file unsupported for multiple-polymer datasets");
+	}
+	LinkedList<LinkedList<Nuc2D>>
+		allNucleotides = new LinkedList<>();
+	for (int complexItemID = 0; complexItemID < this.getItemCount(); complexItemID++) {
+		LinkedList<Nuc2D>
+			nucleotides = new LinkedList<>();
+		allNucleotides.add(nucleotides);
+		((ComplexCollection)this.getItemAt(complexItemID)).printComplexBPSeq(outFile, nucleotides);
+	}
+	for (LinkedList<Nuc2D> nucleotides : allNucleotides) {
+		nucleotides.sort((Nuc2D n0, Nuc2D n1) -> n0.getID() - n1.getID());
+		for (Nuc2D nuc : nucleotides) {
+			int
+				nucID = nuc.getID(),
+				pairID = nuc.getBasePairID();
+			if (pairID != 0 && pairID > nucID) {
+				outFile.println(nucID + " " + nuc.getNucChar() + " " + pairID);
+			} else {
+				outFile.println(nucID + " " + nuc.getNucChar() + " 0");
+			}
+		}
+	}
+}
+
 public ComplexScene2D
 wrapInComplexScene2D(String name)
 throws Exception

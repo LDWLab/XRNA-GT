@@ -851,6 +851,8 @@ throws Exception
 
 public void printComplexSVG(PrintWriter outFile) throws Exception { }
 
+public void printComplexBPSeq(PrintWriter outFile) throws Exception { }
+
 public void printComplexTR(PrintWriter outFile) throws Exception { }
 
 public void printComplexCSV(PrintWriter outFile, LinkedList<Nuc2D> nucleotides, double minX, double minY, double maxX, double maxY) throws Exception { }
@@ -858,6 +860,8 @@ public void printComplexCSV(PrintWriter outFile, LinkedList<Nuc2D> nucleotides, 
 public void printComplexTR(PrintWriter outFile, LinkedList<Nuc2D> nucleotides, double minX, double minY, double maxX, double maxY) throws Exception { }
 
 public void printComplexSVG(PrintWriter outFile, LinkedList<Nuc2D> nucleotides, double minX, double minY, double maxX, double maxY) throws Exception { }
+
+public void printComplexBPSeq(PrintWriter outFile, LinkedList<Nuc2D> nucleotides) throws Exception {}
 
 public void
 printComplexXML(File outFile)
@@ -957,6 +961,32 @@ public void printComplexSVG(File outFile) throws Exception {
 
 	// first get xrna input file as string to bypass any exceptions
 	this.printComplexSVG(new PrintWriter(strWriter));
+
+	// made it past any errors in creating xrna input file
+	outFile.createNewFile();
+	FileWriter genFileWriter = new FileWriter(outFile);
+	PrintWriter pWriter = new PrintWriter(new BufferedWriter(genFileWriter), true);
+	pWriter.print(strWriter.toString());
+	
+	pWriter.flush();
+	pWriter.close();
+}
+
+public void printComplexBPSeq(File outFile) throws Exception {
+	// NEED to catch an exception and not overwrite a file if
+	// there's a problem
+	// or maybe make a backup file if it is same name
+	if (outFile.exists() && (!outFile.canWrite())) {
+		debug("Can't write " + outFile.getName() + " ; Need to set writeable");
+		return;
+	}
+
+	if (outFile.exists()) { FileUtil.copyFile(outFile, new File(outFile.getName() + ".bak")); }
+
+	StringWriter strWriter = new StringWriter();
+
+	// first get xrna input file as string to bypass any exceptions
+	this.printComplexBPSeq(new PrintWriter(strWriter));
 
 	// made it past any errors in creating xrna input file
 	outFile.createNewFile();
