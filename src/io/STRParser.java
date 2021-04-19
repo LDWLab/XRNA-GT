@@ -29,7 +29,7 @@ public class STRParser extends XRNAData {
         ArrayList<ArrayList<Text>>
             inputNucleotideTexts = new ArrayList<>();
         inputNucleotideTexts.add(this.nucleotideTexts);
-        return new ArrayList<>();
+        return inputNucleotideTexts;
     }
 
     @Override
@@ -52,10 +52,24 @@ public class STRParser extends XRNAData {
         return new ArrayList<>();
     }
 
+    @Override
+    public Vector2 getLocusForNucleotideBonding() {
+        
+    }
+
     public STRParser(String inputSTRFilePath) {
         try {
             String
                 fileContents = Files.readString(Paths.get(inputSTRFilePath));
+            Matcher
+                fileInfoMatcher = Pattern.compile("basefont[^\\}]*\\{[^\\}]+\\}[^\\}\\d]*(\\d+)[^\\}]*\\}").matcher(fileContents);
+            if (fileInfoMatcher.find()) {
+                // Default font size parsing.
+                int
+                    defaultFontSize = Integer.parseInt(fileInfoMatcher.group(1));
+                System.out.println("Found default font size: " + defaultFontSize);
+                XRNAData.DEFAULT_FONT_SIZE = defaultFontSize;
+            }
             Matcher
                 textOrLineMatcher = Pattern.compile("(text|line)\\s*\\{").matcher(fileContents);
             while (textOrLineMatcher.find()) {
@@ -89,46 +103,45 @@ public class STRParser extends XRNAData {
                 }
                 String
                     textOrLineContents = fileContents.substring(textOrLineMatchEnd, previousIndex);
+                // System.out.println("Contents: " + textOrLineContents);
                 int
                     textOrLineMatchStart = textOrLineMatcher.start();
                 String
                     label = fileContents.substring(textOrLineMatchStart, textOrLineMatchStart + 4);
                 if (label.equalsIgnoreCase("text")) {
+                    // String
+                    //     pattern = "{\\s*(" + FLOATING_POINT_REGEX + ")\\s+(" + FLOATING_POINT_REGEX + ")\\s*}.*(A|C|G|U)\\s+0\\s*$";
+                    String
+                        pattern = "\\{\\s*(" + FLOATING_POINT_REGEX + ")\\s+(" + FLOATING_POINT_REGEX + ")\\s*\\}.*(A|C|G|U)\\s+0\\s*$";
+                    // System.out.println("Pattern: " + pattern);
                     Matcher
-                        xyCoordinatesMatcher = Pattern.compile("\\{\\s*" + FLOATING_POINT_REGEX + "\\s+" + FLOATING_POINT_REGEX + "\\s*\\}").matcher(textOrLineContents),
-                        nucleotideLetterMatcher = Pattern.compile("\\s*(A|C|G|U)\\s+\\d+\\s*$").matcher(textOrLineContents);
-                    if (xyCoordinatesMatcher.find() && nucleotideLetterMatcher.find()) {
-                        // Remove the brackets and whitespace.
-                        // Split on whitespace to separate coordinate strings.
-                        String[]
-                            xyCoordinateStrings = textOrLineContents.substring(xyCoordinatesMatcher.start() + 1, xyCoordinatesMatcher.end() - 1).strip().split("\\s+");
-                        double
-                            x = Double.parseDouble(xyCoordinateStrings[0]),
-                            y = Double.parseDouble(xyCoordinateStrings[1]);
-                        String
-                            nucleotideLetter = nucleotideLetterMatcher.group().strip().split("\\s+")[0];
+                        textMatcher = Pattern.compile(pattern).matcher(textOrLineContents);
+                    if (textMatcher.find()) {
                         Text
-                            text = new Text(x, y, nucleotideLetter);
+                            text = new Text(Double.parseDouble(textMatcher.group(1)), Double.parseDouble(textMatcher.group(2)), textMatcher.group(3));
                         text.style = new Style();
                         text.style.setToDefaults();
                         this.nucleotideTexts.add(text);
+                        // System.out.println(this.nucleotideTexts.size());
+                    } else {
+                        // System.out.println("Pattern: " + pattern);
+                        // System.out.println("Element: " + textOrLineContents);
+                        // throw new RuntimeException("Broken STR file: broken text element.");
                     }
                 } else {
+                    String 
+                        pattern = "\\{\\s*(" + FLOATING_POINT_REGEX + ")\\s+(" + FLOATING_POINT_REGEX + ")\\s+(" + FLOATING_POINT_REGEX + ")\\s+(" + FLOATING_POINT_REGEX + ")\\s*\\}";
                     Matcher
-                        coordinatesMatcher = Pattern.compile("\\{\\s*" + FLOATING_POINT_REGEX + "\\s+" + FLOATING_POINT_REGEX + "\\s+" + FLOATING_POINT_REGEX + "\\s+" + FLOATING_POINT_REGEX + "\\s*\\}").matcher(textOrLineContents);
+                        coordinatesMatcher = Pattern.compile(pattern).matcher(textOrLineContents);
                     if (coordinatesMatcher.find()) {
-                        String[]
-                            coordinateStrings = textOrLineContents.substring(coordinatesMatcher.start() + 1, coordinatesMatcher.end() - 1).strip().split("\\s+");
-                        double
-                            x0 = Double.parseDouble(coordinateStrings[0]),
-                            y0 = Double.parseDouble(coordinateStrings[1]),
-                            x1 = Double.parseDouble(coordinateStrings[2]),
-                            y1 = Double.parseDouble(coordinateStrings[3]);
                         Line
-                            line = new Line(x0, y0, x1, y1);
+                            line = new Line(Double.parseDouble(coordinatesMatcher.group(1)), Double.parseDouble(coordinatesMatcher.group(2)), Double.parseDouble(coordinatesMatcher.group(3)), Double.parseDouble(coordinatesMatcher.group(4)));
                         line.style = new Style();
                         line.style.setToDefaults();
                         this.lines.add(line);
+                    } else {
+                        System.out.println("Pattern: " + pattern + "\nElement: " + textOrLineContents);
+                        throw new RuntimeException("Broken STR file: broken line element.");
                     }
                 }
             }

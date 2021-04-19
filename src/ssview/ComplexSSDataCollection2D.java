@@ -532,7 +532,7 @@ public void printComplexBPSeq(PrintWriter outFile) throws Exception {
 			int
 				nucID = nuc.getID(),
 				pairID = nuc.getBasePairID();
-			if (pairID != 0 && pairID > nucID) {
+			if (pairID != 0) {
 				outFile.println(nucID + " " + nuc.getNucChar() + " " + pairID);
 			} else {
 				outFile.println(nucID + " " + nuc.getNucChar() + " 0");

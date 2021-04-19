@@ -1,44 +1,39 @@
 package io;
 
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-
+import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.Toolkit;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.BasicStroke;
-import java.awt.event.KeyEvent;
+import java.awt.Toolkit;
 import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.Ellipse2D;
-import java.awt.FontMetrics;
-
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.function.BiFunction;
-import java.util.function.BiConsumer;
 import java.util.Iterator;
-import java.util.ListIterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.File;
-import java.io.IOException;
-
-import util.Tuple2;
-import util.Tuple3;
-import util.Tuple4;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
 
 import ssview.ComplexParentFrame;
 import ssview.Vector2;
+import util.Tuple2;
+import util.Tuple3;
+import util.Tuple4;
 
 public abstract class XRNAData {
     public ArrayList<ArrayList<Text>>
@@ -121,9 +116,11 @@ public abstract class XRNAData {
         }
         BiFunction<Vector2, Text, Double>
             distanceMetric = (Vector2 v, Text nucText) -> {
-                return Vector2.distance(new Vector2(nucText.x, nucText.y), v);
+                Rectangle2D.Double
+                    bounds = getBounds(nucText);
+                return Vector2.distance(new Vector2(bounds.getCenterX(), bounds.getCenterY()), v);
             };
-        Function<Tuple3<Text, Integer, Integer>, Integer>
+        Function<Tuple4<Text, Integer, Integer, Double>, Integer>
             totalIndexHelper = t3 -> listIndexToNucleotideBaseIndexMap.get(t3.t1) + t3.t2;
         // Function<Tuple4<Tuple3<Text, Integer, Integer>, Tuple3<Text, Integer, Integer>, Vector2, Vector2>, Boolean>
         //     indicesCheck = t4 -> Math.abs(totalIndexHelper.apply(t4.t0) - totalIndexHelper.apply(t4.t1)) > 1,
@@ -146,22 +143,42 @@ public abstract class XRNAData {
         //         return ratio <= threshold;
         //     };
         for (Line nucBondLine : this.nucleotideLines) {
-            for (double scalar : Arrays.asList(2d, 2.5d, 3d, 3.5d, 5d)) {
-                nucBondLine = nucBondLine.scale(scalar);
-                Vector2
-                    v0 = new Vector2(nucBondLine.x0, nucBondLine.y0),
-                    v1 = new Vector2(nucBondLine.x1, nucBondLine.y1);
-                Tuple3<Text, Integer, Integer>
-                    nearestNucText0 = XRNAData.this.closestElementWithIndices(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(v0, nucText)),
-                    nearestNucText1 = XRNAData.this.closestElementWithIndices(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(v1, nucText));
-                // if (nucPairValidator.apply(new Tuple4<>(nearestNucText0, nearestNucText1, v0, v1))) {
-                if (Math.abs(totalIndexHelper.apply(nearestNucText0) - totalIndexHelper.apply(nearestNucText1)) > 1) {
-                    this.basePairs.add(new Tuple2<>(
-                        listIndexToNucleotideBaseIndexMap.get(nearestNucText0.t1) + nearestNucText0.t2,
-                        listIndexToNucleotideBaseIndexMap.get(nearestNucText1.t1) + nearestNucText1.t2
-                    ));
-                    break;
+            if (nucBondLine.magnitude() > 1E-4d) {
+                // (Effectively) zero-magnitude line
+                for (double scalar : Arrays.asList(2d, 2.5d, 3d, 3.5d, 5d)) {
+                    nucBondLine = nucBondLine.scale(scalar);
+                    Vector2
+                        v0 = new Vector2(nucBondLine.x0, nucBondLine.y0),
+                        v1 = new Vector2(nucBondLine.x1, nucBondLine.y1);
+                    Tuple4<Text, Integer, Integer, Double>
+                        nearestNucText0 = XRNAData.closestElementWithIndicesAndDistance(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(v0, nucText)),
+                        nearestNucText1 = XRNAData.closestElementWithIndicesAndDistance(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(v1, nucText));
+                    // if (nucPairValidator.apply(new Tuple4<>(nearestNucText0, nearestNucText1, v0, v1))) {
+                    // if (Math.abs(totalIndex0 - totalIndex1) > 1) {
+                    //     this.basePairs.add(new Tuple2<>(
+                    //         listIndexToNucleotideBaseIndexMap.get(nearestNucText0.t1) + nearestNucText0.t2,
+                    //         listIndexToNucleotideBaseIndexMap.get(nearestNucText1.t1) + nearestNucText1.t2
+                    //     ));
+                    //     break;
+                    // }
+                    int
+                        totalIndex0 = totalIndexHelper.apply(nearestNucText0),
+                        totalIndex1 = totalIndexHelper.apply(nearestNucText1);
+                    if (Math.abs(totalIndex0 - totalIndex1) > 1) {
+                        this.basePairs.add(new Tuple2<>(totalIndex0, totalIndex1));
+                        break;
+                    }
                 }
+            } else {
+                Vector2
+                    nucBondLineEndpoint = new Vector2(nucBondLine.x0, nucBondLine.y0);
+                ArrayList<Tuple4<Text, Integer, Integer, Double>>
+                    twoClosestNucleotideTexts = XRNAData.closestElementsWithIndicesAndDistance(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(nucBondLineEndpoint, nucText), 2);
+                int
+                    totalIndex0 = totalIndexHelper.apply(twoClosestNucleotideTexts.get(0)),
+                    totalIndex1 = totalIndexHelper.apply(twoClosestNucleotideTexts.get(1));
+                
+                this.basePairs.add(new Tuple2<>(totalIndex0, totalIndex1));
             }
         }
         ArrayList<LabelDatum>
@@ -174,8 +191,8 @@ public abstract class XRNAData {
                 v0 = new Vector2(labelLine.x0, labelLine.y0),
                 v1 = new Vector2(labelLine.x1, labelLine.y1);
             Tuple3<Text, Integer, Double>
-                nearestLabelText0 = XRNAData.this.closestElementWithIndexAndDistance(this.labelTexts, (Text nucText) -> distanceMetric.apply(v0, nucText)),
-                nearestLabelText1 = XRNAData.this.closestElementWithIndexAndDistance(this.labelTexts, (Text nucText) -> distanceMetric.apply(v1, nucText));
+                nearestLabelText0 = XRNAData.closestElementWithIndexAndDistance(this.labelTexts, (Text nucText) -> distanceMetric.apply(v0, nucText)),
+                nearestLabelText1 = XRNAData.closestElementWithIndexAndDistance(this.labelTexts, (Text nucText) -> distanceMetric.apply(v1, nucText));
             Vector2
                 nucleotideEndpoint;
             Tuple3<Text, Integer, Double>
@@ -188,10 +205,12 @@ public abstract class XRNAData {
                 nearestLabelTextWithDistance = nearestLabelText1;
             }
             Tuple3<Text, Integer, Integer>
-                nearestNucleotideText = XRNAData.this.closestElementWithIndices(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(nucleotideEndpoint, nucText));
+                nearestNucleotideText = XRNAData.closestElementWithIndices(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(nucleotideEndpoint, nucText));
             // Rectangle2D.Double
             //     nucBounds = XRNAData.getBounds(nearestNucleotideText.t0);
-            if (Math.abs(Integer.parseInt(nearestLabelTextWithDistance.t0.content) - nearestNucleotideText.t2) == 0) {
+            // if (Math.abs(Integer.parseInt(nearestLabelTextWithDistance.t0.content) - nearestNucleotideText.t2) == 0) {
+            if (true) {
+                // System.out.println(nearestLabelTextWithDistance.t0.content + " -> " + nearestNucleotideText.t2 + ", " + nearestNucleotideText.t0.content + ". Offset: " + (Integer.parseInt(nearestLabelTextWithDistance.t0.content) - nearestNucleotideText.t2));
             // if ((nearestLabelTextWithDistance.t2 + 2d) <= 5d * Vector2.distance(new Vector2(nucBounds.getCenterX(), nucBounds.getCenterY()), nucleotideEndpoint)) {
                 labelData.add(new LabelDatum(
                     nearestLabelTextWithDistance.t0,
@@ -200,15 +219,10 @@ public abstract class XRNAData {
                     listIndexToNucleotideBaseIndexMap.get(nearestNucleotideText.t1),
                     nearestNucleotideText.t2
                 ));
-            } /*else {
-                System.out.println("Error line: (" + nonscaledLabelLine.x0 + ", " + nonscaledLabelLine.y0 + ", " + nonscaledLabelLine.x1 + ", " + nonscaledLabelLine.y1 + ")");
-            }*/
+            }
         }
         HashMap<Integer, Integer>
             countIndexOffsetsMap = new HashMap<>();
-        // for (Tuple4<Text, Line, Text, Integer> labelDatum : labelData) {
-        //     System.out.println("label content: " + labelDatum.t0.content + " " + labelDatum.t3);
-        // }
         for (LabelDatum labelDatum : labelData) {
             int
                 indexOffset = Integer.parseInt(labelDatum.label.content) - labelDatum.nucleotideIndex;
@@ -222,11 +236,12 @@ public abstract class XRNAData {
         Integer
             maximumOffsetCount = 0,
             mostCommonIndexOffset = null;
+        // System.out.println();
         for (HashMap.Entry<Integer, Integer> indexOffsetEntry : countIndexOffsetsMap.entrySet()) {
             int
                 indexOffset = indexOffsetEntry.getKey(),
                 indexOffsetCount = indexOffsetEntry.getValue();
-            System.out.println("indexOffset: " + indexOffset + " indexOffsetCount: " + indexOffsetCount);
+            // System.out.println("indexOffset: " + indexOffset + " indexOffsetCount: " + indexOffsetCount);
             if (indexOffsetCount > maximumOffsetCount) {
                 maximumOffsetCount = indexOffsetCount;
                 mostCommonIndexOffset = indexOffset;
@@ -235,6 +250,7 @@ public abstract class XRNAData {
         for (LabelDatum labelDatum : labelData) {
             int
                 correctIndex = labelDatum.nucleotideSublistBaseIndex + labelDatum.nucleotideIndex - (mostCommonIndexOffset - labelDatum.indexOffset);
+            // System.out.println(correctIndex + " vs. " + (labelDatum.nucleotideSublistBaseIndex + labelDatum.nucleotideIndex) + " " + labelDatum.indexOffset + " " + mostCommonIndexOffset);
             Text
                 labelText = labelDatum.label.copy(),
                 nucleotideText = null;
@@ -245,7 +261,8 @@ public abstract class XRNAData {
                     int
                         endIndex = nucleotideSublistBaseIndex + nucleotideTextSublist.size();
                     if (endIndex >= correctIndex) {
-                        nucleotideText = nucleotideTextSublist.get(labelDatum.nucleotideIndex - 1);
+                        nucleotideText = nucleotideTextSublist.get(labelDatum.nucleotideIndex);
+                        break;
                     }
                     nucleotideSublistBaseIndex = endIndex;
                 }
@@ -253,6 +270,7 @@ public abstract class XRNAData {
             } else {
                 nucleotideText = labelDatum.nucleotide;
             }
+            System.out.println("Correct: " + correctIndex + "\tTotal Index: " + labelDatum.nucleotideSublistBaseIndex + " + " + labelDatum.nucleotideIndex + " = " + (labelDatum.nucleotideSublistBaseIndex + labelDatum.nucleotideIndex) + "\tIndex Offset: " + labelDatum.indexOffset + "\tLabel: " + labelDatum.label.content);
             nucleotideText = nucleotideText.copy();
             Line
                 labelLine = labelDatum.line.copy();
@@ -270,7 +288,6 @@ public abstract class XRNAData {
                 font = new Font(style.fontFamily, Font.PLAIN, (int)Math.round(style.fontSize));
             FontMetrics
                 fontMetrics = ComplexParentFrame.frame.getFontMetrics(font);
-
             int
                 labelWidth = fontMetrics.stringWidth(labelDatum.label.content),
                 nucWidth = fontMetrics.stringWidth(labelDatum.nucleotide.content);
@@ -296,17 +313,17 @@ public abstract class XRNAData {
         this.invertYCoordinates();
     }
 
-    private <T> T closestElement(Iterable<T> iterable, Function<T, Double> distanceMetric) {
+    private static <T> T closestElement(Iterable<T> iterable, Function<T, Double> distanceMetric) {
         return closestElementWithIndex(iterable, distanceMetric).t0;
     }
 
-    private <T> Tuple2<T, Integer> closestElementWithIndex(Iterable<T> iterable, Function<T, Double> distanceMetric) {
+    private static <T> Tuple2<T, Integer> closestElementWithIndex(Iterable<T> iterable, Function<T, Double> distanceMetric) {
         Tuple3<T, Integer, Double>
-            closestElementWithIndexAndDistance = this.closestElementWithIndexAndDistance(iterable, distanceMetric);
+            closestElementWithIndexAndDistance = closestElementWithIndexAndDistance(iterable, distanceMetric);
         return new Tuple2<>(closestElementWithIndexAndDistance.t0, closestElementWithIndexAndDistance.t1);
     }
 
-    private <T> Tuple3<T, Integer, Double> closestElementWithIndexAndDistance(Iterable<T> iterable, Function<T, Double> distanceMetric) {
+    private static <T> Tuple3<T, Integer, Double> closestElementWithIndexAndDistance(Iterable<T> iterable, Function<T, Double> distanceMetric) {
         Iterator<T>
             iterator = iterable.iterator();
         T
@@ -316,7 +333,7 @@ public abstract class XRNAData {
         Integer
             closestElementIndex = -1;
         int
-            index = 1;
+            index = 0;
         while (iterator.hasNext()) {
             T
                 next = iterator.next();
@@ -332,13 +349,13 @@ public abstract class XRNAData {
         return new Tuple3<>(closestElement, closestElementIndex, minimumDistance);
     }
 
-    private <T> Tuple3<T, Integer, Integer> closestElementWithIndices(Iterable<? extends Iterable<T>> iterable, Function<T, Double> distanceMetric) {
+    private static <T> Tuple3<T, Integer, Integer> closestElementWithIndices(Iterable<? extends Iterable<T>> iterable, Function<T, Double> distanceMetric) {
         Tuple4<T, Integer, Integer, Double>
             closestElementWithIndicesAndDistance = closestElementWithIndicesAndDistance(iterable, distanceMetric);
         return new Tuple3<>(closestElementWithIndicesAndDistance.t0, closestElementWithIndicesAndDistance.t1, closestElementWithIndicesAndDistance.t2);
     }
 
-    private <T> Tuple4<T, Integer, Integer, Double> closestElementWithIndicesAndDistance(Iterable<? extends Iterable<T>> iterable, Function<T, Double> distanceMetric) {
+    private static <T> Tuple4<T, Integer, Integer, Double> closestElementWithIndicesAndDistance(Iterable<? extends Iterable<T>> iterable, Function<T, Double> distanceMetric) {
         Iterator<? extends Iterable<T>>
             iteratorOfIterables = iterable.iterator();
         double
@@ -353,7 +370,7 @@ public abstract class XRNAData {
             Iterator<T>
                 iterator = iteratorOfIterables.next().iterator();
             int
-                index = 1;
+                index = 0;
             while (iterator.hasNext()) {
                 T
                     next = iterator.next();
@@ -370,6 +387,27 @@ public abstract class XRNAData {
             iterableIndex++;
         }
         return new Tuple4<>(closestElement, minimumDistanceIterableIndex, minimumDistanceIndex, minimumDistance);
+    }
+
+    private static <T> ArrayList<Tuple4<T, Integer, Integer, Double>> closestElementsWithIndicesAndDistance(Iterable<? extends Iterable<T>> iterable, Function<T, Double> distanceMetric, int numberOfClosestElements) {
+        LinkedList<Tuple4<T, Integer, Integer, Double>>
+            elements = new LinkedList<>();
+        int
+            outerIndex = 0;
+        for (Iterable<T> subIterable : iterable) {
+            int
+                innerIndex = 0;
+            for (T element : subIterable) {
+                elements.add(new Tuple4<>(element, outerIndex, innerIndex, distanceMetric.apply(element)));
+                innerIndex++;
+            }
+            outerIndex++;
+        }
+        if (elements.size() < numberOfClosestElements) {
+            throw new RuntimeException("The requested number of closest elements exceeds the number of elements yielded by the Iterable object.");
+        }
+        elements.sort((Tuple4<T, Integer, Integer, Double> t0, Tuple4<T, Integer, Integer, Double> t1) -> Double.compare(t0.t3, t1.t3));
+        return new ArrayList<>(elements.subList(0, numberOfClosestElements));
     }
 
     public void printToXRNAFile(String path) {
@@ -457,7 +495,7 @@ public abstract class XRNAData {
             fileString += "<Nuc RefIDs='1-" + numNucleotides + "' SchematicBPGap='2.0' SchematicFPGap='2.0' SchematicTPGap='2.0' />\n";
             fileString += "<Nuc RefIDs='1-" + numNucleotides + "' IsNucPath='false' NucPathColor='ff0000' NucPathLineWidth='0.0' />\n";
             for (Tuple3<Text, Line, Integer> labelDatum : this.labels) {
-                fileString += "<Nuc RefID='" + labelDatum.t2 + "'>\n";
+                fileString += "<Nuc RefID='" + (labelDatum.t2 + 1) + "'>\n";
                 fileString += "<LabelList>\n";
                 Line
                     line = labelDatum.t1;
@@ -472,7 +510,7 @@ public abstract class XRNAData {
             }
             for (Tuple2<Integer, Integer> basePairsDatum : this.basePairs) {
                 // TODO: Collapse adjacent base-pair indices (length > 1).
-                fileString += "<BasePairs nucID='" + basePairsDatum.t0 + "' length='1' bpNucID='" + basePairsDatum.t1 + "' />\n";
+                fileString += "<BasePairs nucID='" + (basePairsDatum.t0 + 1) + "' length='1' bpNucID='" + (basePairsDatum.t1 + 1) + "' />\n";
             }
             fileString += "</RNAMolecule>\n</Complex>\n</ComplexDocument>\n";
             writer.write(fileString);
@@ -481,98 +519,111 @@ public abstract class XRNAData {
         }
     }
 
-    // public void display() {
-    //     JFrame
-    //         frame = new JFrame();
-    //     JPanel
-    //         panel = new JPanel() {
-    //             @Override
-    //             public void paintComponent(Graphics g) {
-    //                 super.paintComponent(g);
-    //                 Graphics2D
-    //                     g2D = (Graphics2D)g;
-    //                 g.setColor(Color.WHITE);
-    //                 g2D.scale(2d, 2d);
-    //                 ArrayList<ArrayList<Text>>
-    //                     nucTexts = XRNAData.this.inputNucleotideTexts();
-    //                 for (ArrayList<Text> texts : Arrays.asList(nucTexts, XRNAData.this.inputLabelTexts(), XRNAData.this.inputHelixTexts())) {
-    //                     for (Text text : texts) {
-    //                         Style
-    //                             style = text.style;
-    //                         Tuple2<Rectangle2D.Double, Font>
-    //                             boundsAndFont = getBoundsAndFont(text);
-    //                         Rectangle2D.Double
-    //                             bounds = boundsAndFont.t0;
-    //                         g2D.setColor(new Color(255, 0, 0, 255));
-    //                         g2D.setStroke(new BasicStroke(0.1f));
-    //                         g2D.draw(boundsAndFont.t0);
-    //                         g2D.setColor(Color.WHITE);
-    //                         double
-    //                             radius = 1d,
-    //                             diameter = 2d * radius;
-    //                         // g2D.draw(new Ellipse2D.Double(bounds.getCenterX() - radius, bounds.getCenterY() - radius, diameter, diameter));
+    public void display() {
+        JFrame
+            frame = new JFrame();
+        JPanel
+            panel = new JPanel() {
+                @Override
+                public void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    Graphics2D
+                        g2D = (Graphics2D)g;
+                    g.setColor(Color.WHITE);
+                    g2D.scale(2d, 2d);
+                    ArrayList<ArrayList<Text>>
+                        nucTexts = XRNAData.this.inputNucleotideTexts();
+                    ArrayList<ArrayList<Text>>
+                        textsListOfLists = new ArrayList<>();//Arrays.asList(XRNAData.this.inputLabelTexts(), XRNAData.this.inputHelixTexts());
+                    textsListOfLists.add(XRNAData.this.inputLabelTexts());
+                    textsListOfLists.add(XRNAData.this.inputHelixTexts());
+                    textsListOfLists.addAll(nucTexts);
+                    ArrayList<Text>
+                        subList0 = nucTexts.get(0);
+                    for (int i = 0; i < subList0.size(); i += 2) {
+                        subList0.get(i).style.fontSize = 5d;
+                    }
+                    for (ArrayList<Text> texts : textsListOfLists) {
+                        for (Text text : texts) {
+                            Style
+                                style = text.style;
+                            Tuple2<Rectangle2D.Double, Font>
+                                boundsAndFont = getBoundsAndFont(text);
+                            Rectangle2D.Double
+                                bounds = boundsAndFont.t0;
+                            g2D.setColor(new Color(255, 0, 0, 255));
+                            g2D.setStroke(new BasicStroke(0.1f));
+                            g2D.draw(boundsAndFont.t0);
+                            g2D.setColor(Color.RED);
+                            
+                            double
+                                radius = 1d,
+                                diameter = 2d * radius,
+                                centerX = text.x,//bounds.getCenterX() - radius,
+                                centerY = text.y;//bounds.getCenterY() - radius;
+                            g2D.fill(new Ellipse2D.Double(centerX, centerY, diameter, diameter));
+                            g2D.setColor(new Color(255 - style.fill.getRed(), 255 - style.fill.getGreen(), 255 - style.fill.getBlue()));
+                            g2D.setFont(boundsAndFont.t1);
+                            g2D.drawString(text.content, (float)text.x, (float)text.y);
+                        }
+                    }
+                    ArrayList<Line>
+                        nucBondLines = XRNAData.this.inputNucleotideLines();
+                    for (ArrayList<Line> lines : Arrays.asList(nucBondLines, XRNAData.this.inputLabelLines())) {
+                        for (Line line : lines) {
+                            line = line.scale(1.5d);
+                            Style
+                                style = line.style;
+                            g2D.setColor(new Color(255 - style.stroke.getRed(), 255 - style.stroke.getGreen(), 255 - style.stroke.getBlue()));
+                            g2D.setStroke(new BasicStroke((float)style.strokeWidth.doubleValue()));
+                            g2D.draw(new Line2D.Double(line.x0, line.y0, line.x1, line.y1));
+                        }
+                    }
 
-    //                         g2D.setFont(boundsAndFont.t1);
-    //                         g2D.setColor(new Color(255 - style.fill.getRed(), 255 - style.fill.getGreen(), 255 - style.fill.getBlue()));
-    //                         g2D.drawString(text.content, (float)text.x, (float)text.y);
-    //                     }
-    //                 }
-    //                 ArrayList<Line>
-    //                     nucBondLines = XRNAData.this.inputNucleotideLines();
-    //                 for (ArrayList<Line> lines : Arrays.asList(nucBondLines, XRNAData.this.inputLabelLines())) {
-    //                     for (Line line : lines) {
-    //                         line = line.scale(1.5d);
-    //                         Style
-    //                             style = line.style;
-    //                         g2D.setColor(new Color(255 - style.stroke.getRed(), 255 - style.stroke.getGreen(), 255 - style.stroke.getBlue()));
-    //                         g2D.setStroke(new BasicStroke((float)style.strokeWidth.doubleValue()));
-    //                         // g2D.draw(new Line2D.Double(line.x0, line.y0, line.x1, line.y1));
-    //                     }
-    //                 }
-
-    //                 for (Line nucBondLine : nucBondLines) {
-    //                     nucBondLine = nucBondLine.scale(2d);
-    //                     g2D.setColor(Color.ORANGE);
-    //                     g2D.draw(new Line2D.Double(nucBondLine.x0, nucBondLine.y0, nucBondLine.x1, nucBondLine.y1));
-    //                     Vector2
-    //                         v0 = new Vector2(nucBondLine.x0, nucBondLine.y0),
-    //                         v1 = new Vector2(nucBondLine.x1, nucBondLine.y1);
-    //                     BiFunction<Vector2, Text, Double>
-    //                         distanceMetric =  (Vector2 v, Text nucText) -> {
-    //                             return Vector2.distance(new Vector2(nucText.x, nucText.y), v);
-    //                         };
-    //                     Tuple2<Text, Integer>
-    //                         nearestNucText0 = XRNAData.this.closestElementWithIndex(nucTexts, (Text nucText) -> distanceMetric.apply(v0, nucText)),
-    //                         nearestNucText1 = XRNAData.this.closestElementWithIndex(nucTexts, (Text nucText) -> distanceMetric.apply(v1, nucText));
-    //                     g2D.setColor(Color.RED);
-    //                     Rectangle2D.Double
-    //                         bounds0 = XRNAData.getBounds(nearestNucText0.t0),
-    //                         bounds1 = XRNAData.getBounds(nearestNucText1.t0);
-    //                     g2D.draw(new Line2D.Double(bounds0.getCenterX(), bounds0.getCenterY(), v0.x, v0.y));
-    //                     g2D.setColor(Color.GREEN);
-    //                     g2D.draw(new Line2D.Double(bounds1.getCenterX(), bounds1.getCenterY(), v1.x, v1.y));
-    //                 }
-    //             }
-    //         };
-    //     panel.setBackground(Color.BLACK);
-    //     Dimension
-    //         screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-    //     frame.add(panel);
-    //     frame.addKeyListener(new KeyAdapter() {
-    //         @Override
-    //         public void keyPressed(KeyEvent event) {
-    //             switch (event.getKeyCode()) {
-    //                 case KeyEvent.VK_ESCAPE:
-    //                     System.exit(0);
-    //                     break;
-    //             }
-    //         }
-    //     });
-    //     frame.setSize(screenSize);
-    //     frame.setUndecorated(true);
-    //     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    //     frame.setVisible(true);
-    // }
+                    // for (Line nucBondLine : nucBondLines) {
+                    //     nucBondLine = nucBondLine.scale(2d);
+                    //     g2D.setColor(Color.ORANGE);
+                    //     g2D.draw(new Line2D.Double(nucBondLine.x0, nucBondLine.y0, nucBondLine.x1, nucBondLine.y1));
+                    //     Vector2
+                    //         v0 = new Vector2(nucBondLine.x0, nucBondLine.y0),
+                    //         v1 = new Vector2(nucBondLine.x1, nucBondLine.y1);
+                    //     BiFunction<Vector2, Text, Double>
+                    //         distanceMetric = (Vector2 v, Text nucText) -> {
+                    //             return Vector2.distance(new Vector2(nucText.x, nucText.y), v);
+                    //         };
+                    //     Tuple2<Text, Integer>
+                    //         nearestNucText0 = XRNAData.this.closestElementWithIndex(nucTexts, (Text nucText) -> distanceMetric.apply(v0, nucText)),
+                    //         nearestNucText1 = XRNAData.this.closestElementWithIndex(nucTexts, (Text nucText) -> distanceMetric.apply(v1, nucText));
+                    //     g2D.setColor(Color.RED);
+                    //     Rectangle2D.Double
+                    //         bounds0 = XRNAData.getBounds(nearestNucText0.t0),
+                    //         bounds1 = XRNAData.getBounds(nearestNucText1.t0);
+                    //     g2D.draw(new Line2D.Double(bounds0.getCenterX(), bounds0.getCenterY(), v0.x, v0.y));
+                    //     g2D.setColor(Color.GREEN);
+                    //     g2D.draw(new Line2D.Double(bounds1.getCenterX(), bounds1.getCenterY(), v1.x, v1.y));
+                    // }
+                }
+            };
+        panel.setBackground(Color.BLACK);
+        Dimension
+            screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        screenSize = new Dimension(screenSize.width * 105 / 144, screenSize.height);
+        frame.add(panel);
+        frame.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent event) {
+                switch (event.getKeyCode()) {
+                    case KeyEvent.VK_ESCAPE:
+                        System.exit(0);
+                        break;
+                }
+            }
+        });
+        frame.setSize(screenSize);
+        frame.setUndecorated(true);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+    }
 
     public static Rectangle2D.Double getBounds(Text text) {
         return getBoundsAndFont(text).t0;
@@ -592,12 +643,14 @@ public abstract class XRNAData {
         return new Tuple2<>(bounds, font);
     }
 
+    public abstract Vector2 getLocusForNucleotideBonding();
+
     public static final double
         EPSILON = 1E-4d,
         DEFAULT_STROKE_WIDTH = 0.2d;
 
     public static final String
-        FLOATING_POINT_REGEX = "-?((\\d+)|((\\d+)?\\.\\d+))(e-?\\d+)?",
+        FLOATING_POINT_REGEX = "-?(?:(?:\\d+)|(?:(?:\\d+)?\\.\\d+))(?:e-?\\d+)?",
         HEADER_ELEMENT_REGEX = "\\w[\\w\\d-]*\\s*=\\s*\"[^\"]*\"",
         DOUBLE_FORMAT_STRING = "%.3f",
         DEFAULT_FONT_FAMILY = Font.DIALOG,
