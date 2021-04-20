@@ -118,6 +118,15 @@ public class Vector2 {
 	public static double distance(Vector2 a, Vector2 b) {
 		return subtract(a, b).magnitude();
 	}
+
+	public static Vector2 project(Vector2 a, Vector2 b) {
+		return scale(b, dot(a, b) / dot(b, b));
+	}
+
+	public static Vector2 reject(Vector2 a, Vector2 b) {
+		// System.out.println("reject(" + a + ", " + b + "): " + subtract(a, project(a, b)));
+		return subtract(a, project(a, b));
+	}
 	
 	public static double angle(Vector2 a, Vector2 b) {
 		return (double)Math.acos(Vector2.dot(a, b) / (a.magnitude() * b.magnitude()));

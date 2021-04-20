@@ -143,7 +143,7 @@ public abstract class XRNAData {
         //         return ratio <= threshold;
         //     };
         for (Line nucBondLine : this.nucleotideLines) {
-            if (nucBondLine.magnitude() > 1E-4d) {
+            if (nucBondLine.magnitude() > EPSILON) {
                 // (Effectively) zero-magnitude line
                 for (double scalar : Arrays.asList(2d, 2.5d, 3d, 3.5d, 5d)) {
                     nucBondLine = nucBondLine.scale(scalar);
@@ -173,7 +173,7 @@ public abstract class XRNAData {
                 Vector2
                     nucBondLineEndpoint = new Vector2(nucBondLine.x0, nucBondLine.y0);
                 ArrayList<Tuple4<Text, Integer, Integer, Double>>
-                    twoClosestNucleotideTexts = XRNAData.closestElementsWithIndicesAndDistance(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(nucBondLineEndpoint, nucText), 2);
+                    twoClosestNucleotideTexts = XRNAData.closestElementsWithIndicesAndDistance(this.nucleotideTexts, (Text nucText) -> Vector2.distance(nucBondLineEndpoint, getLocusForNucleotideBonding(nucText)), 2);
                 int
                     totalIndex0 = totalIndexHelper.apply(twoClosestNucleotideTexts.get(0)),
                     totalIndex1 = totalIndexHelper.apply(twoClosestNucleotideTexts.get(1));
@@ -206,20 +206,13 @@ public abstract class XRNAData {
             }
             Tuple3<Text, Integer, Integer>
                 nearestNucleotideText = XRNAData.closestElementWithIndices(this.nucleotideTexts, (Text nucText) -> distanceMetric.apply(nucleotideEndpoint, nucText));
-            // Rectangle2D.Double
-            //     nucBounds = XRNAData.getBounds(nearestNucleotideText.t0);
-            // if (Math.abs(Integer.parseInt(nearestLabelTextWithDistance.t0.content) - nearestNucleotideText.t2) == 0) {
-            if (true) {
-                // System.out.println(nearestLabelTextWithDistance.t0.content + " -> " + nearestNucleotideText.t2 + ", " + nearestNucleotideText.t0.content + ". Offset: " + (Integer.parseInt(nearestLabelTextWithDistance.t0.content) - nearestNucleotideText.t2));
-            // if ((nearestLabelTextWithDistance.t2 + 2d) <= 5d * Vector2.distance(new Vector2(nucBounds.getCenterX(), nucBounds.getCenterY()), nucleotideEndpoint)) {
-                labelData.add(new LabelDatum(
-                    nearestLabelTextWithDistance.t0,
-                    nearestNucleotideText.t0,
-                    nonscaledLabelLine,
-                    listIndexToNucleotideBaseIndexMap.get(nearestNucleotideText.t1),
-                    nearestNucleotideText.t2
-                ));
-            }
+            labelData.add(new LabelDatum(
+                nearestLabelTextWithDistance.t0,
+                nearestNucleotideText.t0,
+                nonscaledLabelLine,
+                listIndexToNucleotideBaseIndexMap.get(nearestNucleotideText.t1),
+                nearestNucleotideText.t2
+            ));
         }
         HashMap<Integer, Integer>
             countIndexOffsetsMap = new HashMap<>();
@@ -255,22 +248,12 @@ public abstract class XRNAData {
                 labelText = labelDatum.label.copy(),
                 nucleotideText = null;
             if (labelDatum.indexOffset != mostCommonIndexOffset) {
-                int
-                    nucleotideSublistBaseIndex = 0;
-                for (ArrayList<Text> nucleotideTextSublist : this.nucleotideTexts) {
-                    int
-                        endIndex = nucleotideSublistBaseIndex + nucleotideTextSublist.size();
-                    if (endIndex >= correctIndex) {
-                        nucleotideText = nucleotideTextSublist.get(labelDatum.nucleotideIndex);
-                        break;
-                    }
-                    nucleotideSublistBaseIndex = endIndex;
-                }
+                nucleotideText = getNucleotideByIndex(correctIndex);
                 // System.out.println("\t" + labelDatum.label.content + " " + labelDatum.indexOffset);
             } else {
                 nucleotideText = labelDatum.nucleotide;
             }
-            System.out.println("Correct: " + correctIndex + "\tTotal Index: " + labelDatum.nucleotideSublistBaseIndex + " + " + labelDatum.nucleotideIndex + " = " + (labelDatum.nucleotideSublistBaseIndex + labelDatum.nucleotideIndex) + "\tIndex Offset: " + labelDatum.indexOffset + "\tLabel: " + labelDatum.label.content);
+            // System.out.println("Correct: " + correctIndex + "\tTotal Index: " + labelDatum.nucleotideSublistBaseIndex + " + " + labelDatum.nucleotideIndex + " = " + (labelDatum.nucleotideSublistBaseIndex + labelDatum.nucleotideIndex) + "\tIndex Offset: " + labelDatum.indexOffset + "\tLabel: " + labelDatum.label.content);
             nucleotideText = nucleotideText.copy();
             Line
                 labelLine = labelDatum.line.copy();
@@ -310,7 +293,84 @@ public abstract class XRNAData {
             
             this.labels.add(new Tuple3<>(labelText, labelLine, correctIndex));
         }
+        // Nullify label-line offsets.
+        // This solves a seemingly intractable issue stemming from different origins of SVG files causing offsets between label lines and nucleotides.
+        Vector2
+            averageOffset = new Vector2(0d, 0d);
+        int
+            usefulOffsetsCounts = 0;
+        for (Tuple3<Text, Line, Integer> label : labels) {
+            Line
+                labelLine = label.t1;
+            if (labelLine.magnitude() >= EPSILON) {
+                Text
+                    nucleotide = getNucleotideByIndex(label.t2);
+                Rectangle2D.Double
+                    nucleotideCenterBounds = getBounds(nucleotide);
+                Vector2
+                    v0 = new Vector2(labelLine.x0, labelLine.y0),
+                    offset = Vector2.reject(
+                        Vector2.subtract(
+                            new Vector2(0d, 0d), 
+                            v0
+                        ), 
+                        Vector2.subtract(
+                            new Vector2(labelLine.x1, labelLine.y1),
+                            v0
+                        )
+                    );
+                averageOffset = Vector2.add(averageOffset, offset);
+                usefulOffsetsCounts++;
+            }
+        }
+        Tuple3<Text, Line, Integer>
+            label0 = this.labels.get(0);
+        Text
+            text0 = label0.t0;
+        Line
+            line0 = label0.t1;
+        Integer
+            index0 = label0.t2;
+        Text
+            nucleotide0 = getNucleotideByIndex(index0);
+        Rectangle2D.Double
+            bounds0 = getBounds(nucleotide0);
+        Vector2
+            v00 = new Vector2(line0.x0, line0.y0),
+            v10 = new Vector2(line0.x1, line0.y1),
+            center0 = new Vector2(bounds0.getCenterX(), bounds0.getCenterY());
+        System.out.println("v0: " + v00 + " v1: " + v10 + " c: " + center0 + " label: " + text0.content + " index: " + index0);
+        if (usefulOffsetsCounts > 0) {
+            averageOffset = Vector2.scaleDown(averageOffset, usefulOffsetsCounts);
+            System.out.println("AverageOffset: " + averageOffset);
+            System.out.println("UsefulOffsetsCounts: " + usefulOffsetsCounts);
+            for (Tuple3<Text, Line, Integer> label : labels) {
+                Line
+                    line = label.t1;
+                Vector2
+                    displacedV0 = Vector2.add(new Vector2(line.x0, line.y0), averageOffset),
+                    displacedV1 = Vector2.add(new Vector2(line.x1, line.y1), averageOffset);
+                line.x0 = displacedV0.x;
+                line.y0 = displacedV0.y;
+                line.x1 = displacedV1.x;
+                line.y1 = displacedV1.y;
+            }
+        }
         this.invertYCoordinates();
+    }
+
+    private Text getNucleotideByIndex(int index) {
+        int
+            nucleotideSublistBaseIndex = 0;
+        for (ArrayList<Text> nucleotideTextSublist : this.nucleotideTexts) {
+            int
+                endIndex = nucleotideSublistBaseIndex + nucleotideTextSublist.size();
+            if (endIndex >= index) {
+                return nucleotideTextSublist.get(endIndex - index);
+            }
+            nucleotideSublistBaseIndex = endIndex;
+        }
+        throw new RuntimeException("The input index is out of bounds.");
     }
 
     private static <T> T closestElement(Iterable<T> iterable, Function<T, Double> distanceMetric) {
@@ -643,7 +703,7 @@ public abstract class XRNAData {
         return new Tuple2<>(bounds, font);
     }
 
-    public abstract Vector2 getLocusForNucleotideBonding();
+    public abstract Vector2 getLocusForNucleotideBonding(Text text);
 
     public static final double
         EPSILON = 1E-4d,

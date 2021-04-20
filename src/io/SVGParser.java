@@ -6,6 +6,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import ssview.Vector2;
+
 import java.util.HashMap;
 import java.util.Arrays;
 import java.awt.Color;
@@ -13,6 +16,8 @@ import java.awt.Color;
 import util.Tuple2;
 import util.Tree;
 import java.util.function.BiConsumer;
+
+import java.awt.geom.Rectangle2D;
 
 public class SVGParser extends XRNAData {
     public static void main(String[] args) {
@@ -393,6 +398,13 @@ public class SVGParser extends XRNAData {
             });
         }
         return inputLabelLines;
+    }    
+
+    @Override
+    public Vector2 getLocusForNucleotideBonding(Text text) {
+        Rectangle2D.Double
+            bounds = getBounds(text);
+        return new Vector2(bounds.getCenterX(), bounds.getCenterY());
     }
 
     public static Color parseColor(String colorString) {

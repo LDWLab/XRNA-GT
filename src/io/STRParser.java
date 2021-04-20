@@ -8,6 +8,10 @@ import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import java.awt.geom.Rectangle2D;
+
+import ssview.Vector2;
+
 public class STRParser extends XRNAData {
     private ArrayList<Text>
         nucleotideTexts = new ArrayList<Text>();
@@ -53,8 +57,8 @@ public class STRParser extends XRNAData {
     }
 
     @Override
-    public Vector2 getLocusForNucleotideBonding() {
-        
+    public Vector2 getLocusForNucleotideBonding(Text text) {
+        return new Vector2(text.x, text.y);
     }
 
     public STRParser(String inputSTRFilePath) {
