@@ -323,23 +323,23 @@ public abstract class XRNAData {
                 usefulOffsetsCounts++;
             }
         }
-        Tuple3<Text, Line, Integer>
-            label0 = this.labels.get(0);
-        Text
-            text0 = label0.t0;
-        Line
-            line0 = label0.t1;
-        Integer
-            index0 = label0.t2;
-        Text
-            nucleotide0 = getNucleotideByIndex(index0);
-        Rectangle2D.Double
-            bounds0 = getBounds(nucleotide0);
-        Vector2
-            v00 = new Vector2(line0.x0, line0.y0),
-            v10 = new Vector2(line0.x1, line0.y1),
-            center0 = new Vector2(bounds0.getCenterX(), bounds0.getCenterY());
-        System.out.println("v0: " + v00 + " v1: " + v10 + " c: " + center0 + " label: " + text0.content + " index: " + index0);
+        // Tuple3<Text, Line, Integer>
+        //     label0 = this.labels.get(0);
+        // Text
+        //     text0 = label0.t0;
+        // Line
+        //     line0 = label0.t1;
+        // Integer
+        //     index0 = label0.t2;
+        // Text
+        //     nucleotide0 = getNucleotideByIndex(index0);
+        // Rectangle2D.Double
+        //     bounds0 = getBounds(nucleotide0);
+        // Vector2
+        //     v00 = new Vector2(line0.x0, line0.y0),
+        //     v10 = new Vector2(line0.x1, line0.y1),
+        //     center0 = new Vector2(bounds0.getCenterX(), bounds0.getCenterY());
+        // System.out.println("v0: " + v00 + " v1: " + v10 + " c: " + center0 + " label: " + text0.content + " index: " + index0);
         if (usefulOffsetsCounts > 0) {
             averageOffset = Vector2.scaleDown(averageOffset, usefulOffsetsCounts);
             System.out.println("AverageOffset: " + averageOffset);
