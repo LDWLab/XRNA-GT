@@ -1808,8 +1808,10 @@ public void printComplexCSV(PrintWriter out, LinkedList<Nuc2D> nucleotides, doub
 			}
 			
 			double
-				sx = (MAX_XCO - MIN_XCO) / (maxX - minX),
-				sy = -(MAX_YCO - MIN_YCO) / (maxY - minY),
+				// sx = (MAX_XCO - MIN_XCO) / (maxX - minX),
+				// sy = -(MAX_YCO - MIN_YCO) / (maxY - minY),
+				sx = Math.min((MAX_XCO - MIN_XCO) / (maxX - minX), (MAX_YCO - MIN_YCO) / (maxY - minY)),
+				sy = -sx,
 				cx0 = (minX + maxX) / 2d,
 				cx1 = (MIN_XCO + MAX_XCO) / 2d,
 				cy0 = (minY + maxY) / 2d,
